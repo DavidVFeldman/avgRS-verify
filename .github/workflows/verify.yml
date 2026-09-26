@@ -2,6 +2,15 @@ name: verify
 
 # Builds the project from clean and records the axiom audit in the log.
 # Manual runs: Actions -> verify -> Run workflow.
+#
+# The build is split into stages rather than run as one `lake build`, for two
+# reasons.  A stage names the module that failed, and its wall time and peak
+# memory appear in the log.  And the four large `ZLineAlg*` modules have disjoint
+# import closures, so a single `lake build -j4` elaborates them at the same time;
+# building them one stage at a time removes that peak.
+#
+# Stages 5 and 6 need none of the four, so Theorem 2.1, Theorem 3.6, Theorem 4.1
+# and the Giambelli statements are audited whether or not the z-line algebra builds.
 
 on:
   push:
@@ -17,7 +26,25 @@ jobs:
 
       - name: Machine
         run: |
-          echo "cores: $(nproc)"; free -g; df -h /; ulimit -s
+          echo "cores: $(nproc)"; free -m; swapon --show; df -h / /mnt; ulimit -s; ulimit -v
+
+      # Run #1 died at module 8060 of 8093 with exit 143 — SIGTERM, the host gone,
+      # which is what a runner reclaimed after memory exhaustion reports. 16 GiB is
+      # not much for these modules, so: reclaim disk, then put 24 GiB of swap on the
+      # temporary disk. Swap makes an over-large elaboration slow rather than fatal,
+      # and a slow step is diagnosable.
+      - name: Disk and swap headroom
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android \
+                      /opt/hostedtoolcache/CodeQL /usr/local/share/boost 2> /dev/null || true
+          sudo swapoff -a || true
+          sudo rm -f /mnt/swapfile /swapfile
+          sudo fallocate -l 24G /mnt/swapfile || sudo dd if=/dev/zero of=/mnt/swapfile bs=1M count=24576
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile > /dev/null
+          sudo swapon /mnt/swapfile
+          sudo sysctl -w vm.swappiness=10 > /dev/null
+          swapon --show; free -m; df -h / /mnt
 
       - name: Closure audit (no sorry, admit, native_decide, unsafe)
         run: |
@@ -36,25 +63,73 @@ jobs:
         run: lean --version && lake --version
 
       - name: Mathlib cache
-        run: lake exe cache get
+        run: |
+          lake exe cache get
+          df -h /; du -sh .lake 2> /dev/null || true
 
-      - name: Build (both library targets)
+      - name: Raise the stack for every later step
+        run: |
+          ulimit -s unlimited && echo "stack: unlimited" || echo "stack stays at $(ulimit -s) KiB"
+          chmod +x scripts/ci_build.sh
+
+      # --- the part that needs none of the four large ZLineAlg modules ---
+
+      - name: Build the shift side
         run: |
           ulimit -s unlimited || true
-          lake build 2>&1 | tee build.log
-          echo "--- exit status of lake build: ${PIPESTATUS[0]}"
-          test "${PIPESTATUS[0]}" -eq 0
+          scripts/ci_build.sh shift \
+            RequestProject.ShiftProof \
+            RequestProject.AverageTableau \
+            RequestProject.DiagonalArrivalAllN \
+            RequestProject.ZLine
 
-      - name: Warnings and errors in the build log
+      - name: Axiom audit — Theorems 2.1, 3.6, 4.1, Giambelli
+        run: |
+          lake env lean AuditShift.lean 2>&1 | tee axioms-shift.log
+          echo "--- every line above should name only propext, Classical.choice, Quot.sound"
+          ! grep -qi "sorryAx\|ofReduceBool\|trustCompiler" axioms-shift.log
+
+      # --- the z-line algebra, one large module per stage ---
+
+      - name: Build ZLineAlgG01m
+        run: |
+          ulimit -s unlimited || true
+          scripts/ci_build.sh G01m RequestProject.ZLineAlgG01m
+
+      - name: Build ZLineAlgFin
+        run: |
+          ulimit -s unlimited || true
+          scripts/ci_build.sh Fin RequestProject.ZLineAlgFin
+
+      - name: Build ZLineAlgBig
+        run: |
+          ulimit -s unlimited || true
+          scripts/ci_build.sh Big RequestProject.ZLineAlgBig
+
+      - name: Build ZLineAlgG11m
+        run: |
+          ulimit -s unlimited || true
+          scripts/ci_build.sh G11m RequestProject.ZLineAlgG11m
+
+      - name: Build ZLineProof
+        run: |
+          ulimit -s unlimited || true
+          scripts/ci_build.sh zlineproof RequestProject.ZLineProof
+
+      - name: Build everything else
+        run: |
+          ulimit -s unlimited || true
+          scripts/ci_build.sh rest
+
+      - name: Warnings and errors across all build logs
         if: always()
         run: |
-          grep -nE "^(error|warning)" build.log | head -50 || echo "none"
+          grep -nE "^(error|warning)" build-*.log | head -80 || echo "none"
 
-      - name: Axiom audit
+      - name: Axiom audit — the whole development
         run: |
           lake env lean Audit.lean 2>&1 | tee axioms.log
-          echo "--- every line below should name only propext, Classical.choice, Quot.sound"
-          cat axioms.log
+          echo "--- every line above should name only propext, Classical.choice, Quot.sound"
           ! grep -qi "sorryAx\|ofReduceBool\|trustCompiler" axioms.log
 
       - name: Upload logs
@@ -63,5 +138,7 @@ jobs:
         with:
           name: verify-logs
           path: |
-            build.log
+            build-*.log
+            mem-*.txt
             axioms.log
+            axioms-shift.log
