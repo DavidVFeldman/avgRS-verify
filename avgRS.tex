@@ -1,0 +1,1600 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1.1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage[expansion=false]{microtype}
+\setlength{\emergencystretch}{3em}
+\allowdisplaybreaks
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{computation}[theorem]{Computation}
+\newtheorem{problem}[theorem]{Problem}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{convention}[theorem]{Convention}
+
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\Pl}{\mathrm{Pl}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\dd}{\,\mathrm{d}}
+\newcommand{\ket}[1]{v_{#1}}
+\newcommand{\F}[4]{{}_2F_1\!\left(#1,#2;#3;#4\right)}
+\DeclareMathOperator{\sh}{sh}
+\DeclareMathOperator{\Durfee}{d}
+
+\title{The average Robinson--Schensted tableau,\\ a shift identity for Plancherel growth,\\ and its extension to a line of $z$-measures\\[4pt] \large Version 3, with a proof of the shift identity}
+\author{Notes prepared for D.~V.~Feldman}
+\date{September 25, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+For a uniformly random permutation of $[N]$ let $(P,Q)$ be its Robinson--Schensted pair. Averaging the entries of $P$ over $S_N$ and letting $N\to\infty$ defines a function $F(m,n)$ on the boxes of the quarter plane; $F(m,n)$ is the expected time at which the box $(m,n)$ is added in the Plancherel growth process. The function was posed as a question on MathOverflow in 2011. These notes collect what is proved, what is verified by finite computation, and what is conjectured about $F$. The main object is the identity $F(k,k)=F(k-1,k+1)+1$, which holds at the level of distributions: the arrival time of the box $(k,k)$ is distributed as one plus the arrival time of $(k-1,k+1)$. It is proved for all $k$ (Theorem~\ref{thm:main}, proved in Section~\ref{sec:proof}): in Frobenius coordinates the generating functions of the Durfee square and of a shifted Durfee square are Fredholm determinants of one Hankel-type matrix $H(r)$, $r=\sqrt\theta$, and the identity becomes a relation between four entries of the resolvent $(1+zH^2)^{-1}$, which are computed in closed form, as formal power series in $r$, from a system of differential equations in $r$ that closes on four scalars and has two algebraic first integrals. The identity is also the leading coefficient of a one-parameter polynomial identity for the Kerov--Olshanski--Vershik $z$-measures on the line $z+z'=-2$, where the content weight $(z+c)(z'+c)$ is invariant under the reflection $c\mapsto2-c$ exchanging the two boxes; on the line it is proved for $k=2$ by hand through generating functions built from one hypergeometric function, and verified by finite computation for $k\le4$. Closed forms for $F(1,2),F(1,3),F(2,2)$, a single-sum formula for $F(1,4)$, a table of values, an equivalent identity for the resolvent of the discrete Bessel kernel, a Painlev\'e-type equation for the generating function of the Durfee square, and asymptotics are included.
+\end{abstract}
+
+\tableofcontents
+
+\section*{Reader's guide}
+Section~\ref{sec:setup} defines $F$ and gives its two exact representations (a series from the hook formula and an integral of a Fredholm determinant), the closed forms for the first values, and the table of values. Section~\ref{sec:identity} states the shift identity (Theorem~\ref{thm:main}) in its equivalent forms, proves the case $k=2$ twice by elementary means, and records the computational checks and the negative results showing that the identity is isolated. Section~\ref{sec:zline} extends the identity to the $z$-measures on the line $z+z'=-2$ (Conjecture~\ref{conj:zline}; proved in Lean, Remark~\ref{rem:zlinestatus}) and proves the $k=2$ case there twice. Section~\ref{sec:proved} proves, independently of the main proof, the closed form for the probability that the next box of Plancherel growth lies on the diagonal. Section~\ref{sec:proof} proves Theorem~\ref{thm:main}; it is self-contained given Sections~\ref{sec:setup}--\ref{sec:identity}, works entirely with formal power series in $r=\sqrt\theta$ (no analysis enters), and a reader interested only in the proof can go there directly after Proposition~\ref{prop:equiv}. Section~\ref{sec:bessel} gives the equivalent form of the identity for the resolvent of the discrete Bessel kernel. Section~\ref{sec:fock} gives the Fock-space formulation and the involution behind the line $z+z'=-2$. Section~\ref{sec:grid} gives the finite model (uniform random subsets of an $a\times(a+2)$ grid) and the obstacles to a bijective proof. Section~\ref{sec:asym} gives asymptotics. Section~\ref{sec:open} lists open problems. Appendix~\ref{app:hyper} collects the facts about ${}_2F_1$, Bessel functions and symmetric functions that are used, with references. Appendix~\ref{app:prov} records every computation with its method and its independent check. Appendix~\ref{app:formal} records which statements have been formalized in Lean, and with which definitions.
+
+Each claim carries one of four labels: \emph{proved}, \emph{verified by finite computation} (with the range), \emph{numerical} (floating point, with the precision), or \emph{conjectured}. Proofs are written so that each displayed step can be checked by hand; where a step was also checked by machine, the appendix says so.
+
+\section*{Notation}
+\begin{center}\small
+\begin{tabular}{lp{3.9in}}
+\toprule
+$\lambda\vdash N$, $\lambda'$, $\ell(\lambda)$ & partition of $N$, its conjugate, its number of parts\\
+$c(i,j)=j-i$ & content of the box in row $i$, column $j$\\
+$f_\lambda$, $H_\lambda$ & number of standard tableaux of shape $\lambda$; product of hook lengths; $f_\lambda=N!/H_\lambda$\\
+$F(\lambda)=f_\lambda/|\lambda|!$ & \\
+$\Durfee(\lambda)$ & side of the Durfee square, $\max\{k:\lambda_k\ge k\}$\\
+$H(a,b)$ & fat hook: shapes with $\lambda_{a+1}\le b$\\
+$\Pl_N$, $\Pl_\theta$ & Plancherel measure $f_\lambda^2/N!$; its Poissonization $e^{-\theta}\theta^{|\lambda|}F(\lambda)^2$\\
+$T(m,n)$ & arrival time of the box $(m,n)$ in Plancherel growth\\
+$X(\lambda)$, $n_x$, $N_s$ & particle configuration $\{\lambda_i-i\}$, occupation of site $x$, number of particles in $[s,\infty)$\\
+$u=2\sqrt\theta$, $J_n=J_n(u)$ & Bessel functions of integer order\\
+$K$, $K_0$, $K_{[s,\infty)}$ & discrete Bessel kernel on $\Z$; its restrictions to $[0,\infty)$, $[s,\infty)$\\
+$z$, $\xi=1-z$ & counting variable and its complement\\
+$R$, $\rho$, $\tilde\rho$ & resolvents $(1-\xi K_0)^{-1}$, $RK_0$, $(1-\xi KP_0)^{-1}K$\\
+$j^{(i)}$, $a_{ki}$ & the vector $x\mapsto J_{x+i}$ on $[0,\infty)$; $\langle j^{(k)},Rj^{(i)}\rangle$\\
+$z,z'$, $t=(z+1)^2$ & $z$-measure parameters; on the line $z'=-z-2$, $t$ is the parameter\\
+$w_t(\lambda)$, $Z_N(t)$ & $\prod_\square((c-1)^2-t)/H_\lambda^2$; $(1-t)_N/N!$\\
+$s$, $y(x)$, $\vartheta$ & $s^2=t$; $y=\F{-s}{s}{1}{x}$; $\vartheta=x\,d/dx$\\
+$(f\otimes g)h=f\langle g,h\rangle$ & rank-one operator\\
+$K$, $R$, $\operatorname{val}$, $f(0)$ & (Section~\ref{sec:proof}) $\mathbb Q(z)$; $K[[r]]$; order in $r$; constant term\\
+$\mathcal V_k$, $\mathcal B_k$ & sequences with $\operatorname{val}f_a\ge a-k$; matrices with $\operatorname{val}M_{ab}\ge a+b-k$\\
+$H$, $v$, $A$, $X$ & (Section~\ref{sec:proof}) hook matrix $r^{a+b+1}/(a!b!(a+b+1))$, vector $r^a/a!$, $\operatorname{diag}(a)$, weighted shift $(Xf)_a=af_{a-1}$\\
+$\mathcal G$, $p,q,t,s$ & $(1+zH^2)^{-1}$; $\mathcal Gv$, $\mathcal GHv$, $\mathcal GAv$, $\mathcal GHAv$\\
+$P,Q,P_1,Q_1$ & $\langle v,p\rangle,\langle v,q\rangle,\langle Av,p\rangle,\langle Av,q\rangle$ (Section~\ref{sec:proof} only)\\
+$\sigma,\beta,W,u,w$ & $P_1-zrPQ$, $r(1-zP^2)$, $rP^2-Q$, $r-zQ$, $r-2zrP^2+zQ$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{The function $F$}\label{sec:setup}
+
+\subsection{Definitions and conventions}
+
+\begin{convention}
+A partition $\lambda=(\lambda_1\ge\lambda_2\ge\cdots)$ of $N$ is drawn in English notation; the box $(i,j)$ is in row $i$ and column $j$, and its \emph{content} is $c(i,j)=j-i$. $\lambda'$ is the conjugate partition, $\lambda_i=0$ for $i>\ell(\lambda)$, $f_\lambda$ is the number of standard Young tableaux of shape $\lambda$, and $H_\lambda=\prod_{\square\in\lambda}h(\square)$ is the product of hook lengths, so that $f_\lambda=N!/H_\lambda$ (Frame--Robinson--Thrall). The \emph{Durfee square} of $\lambda$ has side $\Durfee(\lambda)=\max\{k:\lambda_k\ge k\}$. The box $(m,n)$ belongs to $\lambda$ iff $\lambda_m\ge n$. The Plancherel measure on partitions of $N$ is $\Pl_N(\lambda)=f_\lambda^2/N!$. A \emph{corner} of $\lambda$ is a box whose removal leaves a partition; a box is \emph{addable} if adding it gives a partition. $\mu\lessdot\lambda$ means $\lambda=\mu+\square$.
+\end{convention}
+
+\begin{definition}[Robinson--Schensted, Plancherel growth]
+For $\pi\in S_N$ let $(P_\pi,Q_\pi)$ be the Robinson--Schensted pair, both of shape $\sh(\pi)$. The \emph{Plancherel growth process} is the Markov chain $\lambda(0)=\varnothing\subset\lambda(1)\subset\cdots$ on Young's lattice with transition probabilities
+\begin{equation}\label{eq:plgrowth}
+p(\mu\to\lambda)=\frac{f_\lambda}{(|\mu|+1)f_\mu}\qquad(\lambda=\mu+\square);
+\end{equation}
+these sum to $1$ over $\lambda\gtrdot\mu$ because $\sum_{\lambda\gtrdot\mu}f_\lambda=(|\mu|+1)f_\mu$, and the marginal at time $N$ is $\Pl_N$ because $\sum_{\mu\lessdot\lambda}f_\mu=f_\lambda$. If $\pi$ is uniform on $S_N$ then $Q_\pi$ is a uniformly random standard tableau of a $\Pl_N$-random shape, and the shapes of $Q_\pi$ restricted to the entries $1,\dots,n$ ($n\le N$) form the growth process up to time $N$. For a box $b=(m,n)$ let
+\[
+T(m,n)=\min\{N:\ \lambda(N)\ni(m,n)\}
+\]
+be its \emph{arrival time}, so that $Q_\pi(m,n)=T(m,n)$ whenever $T(m,n)\le N$.
+\end{definition}
+
+\begin{definition}[The function $F$]
+Regard $P_\pi$ as a function on $\Z_{>0}^2$, equal to $0$ outside its shape. Put $F_N(m,n)=\frac1{N!}\sum_{\pi\in S_N}P_\pi(m,n)$ and $F(m,n)=\lim_{N\to\infty}F_N(m,n)$.
+\end{definition}
+
+The function $F$, the values $F(1,2)=e$ and $F(2,2)=1+e^2(I_0(2)-I_1(2))$, the equality $F(1,3)=F(2,2)-1$, and the stopping-time interpretation of Remark~\ref{rem:stopping} were posed as a question on MathOverflow in December 2011 [Feldman 2011], which asked whether $F$ appears in the literature and for an explanation of the equality. The question received no reference in the fifteen years since, and the function does not appear in the literature searched for these notes. Theorem~\ref{thm:main} is the explanation asked for: $F(1,3)=F(2,2)-1$ is the case $k=2$ of $F(k,k)=F(k-1,k+1)+1$, which holds at the level of distributions of arrival times.
+
+\begin{proposition}[proved]\label{prop:FisET}
+$F_N(m,n)=\E[T(m,n)\,\mathbf 1_{T(m,n)\le N}]$ and $F(m,n)=\E\,T(m,n)$, the expected arrival time of the box $(m,n)$ in Plancherel growth. Equivalently $F(m,n)$ is the expected $(m,n)$ entry of a Plancherel-random infinite standard tableau in the sense of Kerov--Vershik.
+\end{proposition}
+
+\begin{proof}
+$P_{\pi^{-1}}=Q_\pi$, and inversion preserves the uniform measure, so the average of $P_\pi$ equals the average of $Q_\pi$. The entry $Q_\pi(m,n)$ is $T(m,n)$ if $T(m,n)\le N$ and $0$ otherwise. The growth process is a single process and $T(m,n)$ a single random variable, so monotone convergence gives the limit. Finiteness of $\E\,T(m,n)$ follows from the series in Proposition~\ref{prop:series}, whose terms decay superexponentially.
+\end{proof}
+
+\begin{remark}[Stopping-time interpretation]\label{rem:stopping}
+By Greene's theorem, $\lambda_1+\cdots+\lambda_m$ is the maximal size of a union of $m$ increasing subsequences of $\pi$. Hence $(m,n)\in\sh(\pi)$ iff the maximal size of a union of $m$ increasing subsequences exceeds that of $m-1$ increasing subsequences by at least $n$, which is the description of $T(m,n)$ as a stopping time for an i.i.d.\ uniform sequence. That the difference of the two maxima, once it reaches $n$, never falls below $n$ again (so that the stopping time is the arrival time), and that averaging $Q_\pi$ is the same as averaging $P_\pi$, were pointed out by M.~van Leeuwen in a comment on [Feldman 2011]; both are used in the proof of Proposition~\ref{prop:FisET}.
+\end{remark}
+
+\subsection{Two exact representations}
+
+\begin{proposition}[proved]\label{prop:series}
+\begin{equation}\label{eq:series}
+F(m,n)=\sum_{N\ge0}\Prob\bigl(T(m,n)>N\bigr)=\sum_{N\ge0}\frac1{N!}\sum_{\substack{\lambda\vdash N\\ \lambda_m\le n-1}}f_\lambda^2 .
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+For a random variable with values in $\{1,2,\dots\}$, $\E\,T=\sum_{N\ge0}\Prob(T>N)$; and $\{T(m,n)>N\}=\{\lambda(N)\not\ni(m,n)\}=\{\lambda(N)_m\le n-1\}$.
+\end{proof}
+
+The inner sum runs over shapes inside the fat hook $H(m-1,n-1)$; Regev's asymptotics for such sums give the rate of convergence.
+
+\begin{definition}[Poissonization, particle coordinates, discrete Bessel kernel]\label{def:bessel}
+The Poissonized Plancherel measure with parameter $\theta>0$ is
+\[
+\Pl_\theta(\lambda)=e^{-\theta}\theta^{|\lambda|}F(\lambda)^2=\sum_N\frac{e^{-\theta}\theta^N}{N!}\Pl_N(\lambda),
+\]
+the law of $\lambda(\mathcal N)$ where $\mathcal N$ is Poisson with mean $\theta$, independent of the growth process. To $\lambda$ associate $X(\lambda)=\{\lambda_i-i:\ i\ge1\}\subset\Z$ (a set with exactly $\Durfee(\lambda)$ elements $\ge0$ and containing all sufficiently negative integers), with occupation numbers $n_x=\mathbf 1[x\in X(\lambda)]$ and counting functions $N_s=\#\bigl(X(\lambda)\cap[s,\infty)\bigr)$. Put $u=2\sqrt\theta$, $J_n=J_n(u)$, and
+\begin{equation}\label{eq:Kdef}
+K(x,y)=\sum_{s\ge1}J_{x+s}J_{y+s}\qquad(x,y\in\Z).
+\end{equation}
+\end{definition}
+
+\begin{lemma}[proved]\label{lem:Kforms}
+For $x\ne y$, $\displaystyle K(x,y)=\sqrt\theta\,\frac{J_xJ_{y+1}-J_{x+1}J_y}{x-y}$; and for all $x,y$,
+\begin{equation}\label{eq:dK}
+\partial_\theta K(x,y)=\frac{J_xJ_{y+1}+J_{x+1}J_y}{u}.
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Write $x-y=(x+s)-(y+s)$ and use the recurrence $nJ_n=\frac u2(J_{n-1}+J_{n+1})$ twice:
+\begin{align*}
+(x-y)K(x,y)&=\frac u2\sum_{s\ge1}\bigl[(J_{x+s-1}+J_{x+s+1})J_{y+s}-J_{x+s}(J_{y+s-1}+J_{y+s+1})\bigr]\\
+&=\frac u2\Bigl[\sum_{s\ge1}J_{x+s-1}J_{y+s}-\sum_{s\ge1}J_{x+s}J_{y+s+1}\Bigr]+\frac u2\Bigl[\sum_{s\ge1}J_{x+s+1}J_{y+s}-\sum_{s\ge1}J_{x+s}J_{y+s-1}\Bigr].
+\end{align*}
+In the first bracket the second sum is the first sum with $s$ replaced by $s+1$, so the bracket telescopes to the $s=1$ term $J_xJ_{y+1}$; likewise the second bracket telescopes to $-J_{x+1}J_y$. Since $u/2=\sqrt\theta$ this is the first claim. For \eqref{eq:dK}: $\frac{d}{d\theta}J_n(2\sqrt\theta)=J_n'(u)\frac{du}{d\theta}=\frac12(J_{n-1}-J_{n+1})\cdot\frac{1}{\sqrt\theta}=\frac1u(J_{n-1}-J_{n+1})$, so
+\[
+\partial_\theta K(x,y)=\frac1u\sum_{s\ge1}\bigl[(J_{x+s-1}-J_{x+s+1})J_{y+s}+J_{x+s}(J_{y+s-1}-J_{y+s+1})\bigr],
+\]
+and the same telescoping gives $(J_xJ_{y+1}+J_{x+1}J_y)/u$.
+\end{proof}
+
+Under $\Pl_\theta$ the configuration $X(\lambda)$ is a determinantal point process with correlation kernel $K$ (Borodin--Okounkov--Olshanski, Theorem~2 there, in the coordinates $\lambda_i-i+\frac12$; Johansson). For a determinantal process with kernel $K$ and a function $g$ on $\Z$ with $g-1$ finitely supported, or decaying fast enough for the trace-class condition,
+\begin{equation}\label{eq:multfunc}
+\E\Bigl[\prod_{x\in X}g(x)\Bigr]=\det\bigl(1+(g-1)K\bigr),
+\end{equation}
+the Fredholm determinant on $\ell^2(\Z)$ of the operator with kernel $(g(x)-1)K(x,y)$. Two consequences used repeatedly:
+\begin{itemize}
+\item with $g=z$ on $[s,\infty)$ and $1$ elsewhere, $\E[z^{N_s}]=\det(1-\xi P_sK)$, $\xi=1-z$, $P_s$ the coordinate projection onto $\ell^2[s,\infty)$; in block form with respect to $\ell^2[s,\infty)\oplus\ell^2(-\infty,s-1]$, $1-\xi P_sK=\begin{pmatrix}1-\xi K_{[s,\infty)}&-\xi K_{s,-}\\0&1\end{pmatrix}$ is block upper triangular, so
+\begin{equation}\label{eq:Ds}
+\E_\theta[z^{N_s}]=\det\bigl(1-\xi K_{[s,\infty)}\bigr)=:D_s(z);
+\end{equation}
+\item $\Prob_\theta(n_x=1)=K(x,x)$ and $\Prob_\theta(n_x=n_y=1)=K(x,x)K(y,y)-K(x,y)^2$.
+\end{itemize}
+
+\begin{proposition}[proved]\label{prop:fredholm}
+\begin{equation}\label{eq:Fint}
+F(m,n)=\int_0^\infty\Prob_\theta\bigl(N_{n-m}\le m-1\bigr)\dd\theta,
+\end{equation}
+where the gap probabilities are
+\begin{equation}\label{eq:gap}
+\Prob_\theta(N_s\le j)=\sum_{i=0}^{j}\frac{(-1)^i}{i!}\,\partial_\zeta^i\det\bigl(1-\zeta K_{[s,\infty)}\bigr)\Big|_{\zeta=1}.
+\end{equation}
+For $m=1$ this is Gessel's formula
+\begin{equation}\label{eq:gessel}
+F(1,n)=\int_0^\infty e^{-\theta}\det\bigl[I_{i-j}(2\sqrt\theta)\bigr]_{i,j=1}^{n-1}\dd\theta ,
+\end{equation}
+where $I_\nu$ is the modified Bessel function.
+\end{proposition}
+
+\begin{proof}
+$\int_0^\infty\Prob_\theta(\lambda_m\le n-1)\dd\theta=\sum_N\Prob_N(\lambda_m\le n-1)\int_0^\infty e^{-\theta}\theta^N/N!\dd\theta=\sum_N\Prob_N(\lambda_m\le n-1)=F(m,n)$. The event $\lambda_m\le n-1$ is $\lambda_m-m\le n-m-1$, i.e.\ fewer than $m$ particles in $[n-m,\infty)$. By \eqref{eq:Ds}, $\E_\theta[(1-\zeta)^{N_s}]=\det(1-\zeta K_{[s,\infty)})$, and $\Prob(N_s=i)$ is the coefficient of $(1-\zeta)^i$, i.e.\ $\frac{(-1)^i}{i!}\partial_\zeta^i$ at $\zeta=1$. For $m=1$, $\det(1-K_{[n-1,\infty)})=e^{-\theta}\det[I_{i-j}(2\sqrt\theta)]$ is the Borodin--Okounkov form of Gessel's identity $\sum_{\lambda_1\le n-1}\theta^{|\lambda|}F(\lambda)^2=\det[I_{i-j}(2\sqrt\theta)]_{i,j=1}^{n-1}$.
+\end{proof}
+
+\subsection{Closed forms and a single-sum formula}
+
+\begin{proposition}[proved]\label{prop:closed}
+$F(1,1)=1$, $F(1,2)=F(2,1)=e$, $F(1,3)=F(3,1)=e^2\bigl(I_0(2)-I_1(2)\bigr)$, and $F(2,2)=F(1,3)+1$.
+\end{proposition}
+
+\begin{proof}
+$F(1,2)=\sum_N\Prob_N(\lambda_1\le1)=\sum_N1/N!=e$. $F(1,3)=\sum_NC_N/N!$ where $C_N$ is the Catalan number, the count of permutations with no increasing subsequence of length $3$; and $\sum_NC_Nx^N/N!=e^{2x}(I_0(2x)-I_1(2x))$. The last equality is Theorem~\ref{thm:k2}.
+\end{proof}
+
+\begin{proposition}[proved]\label{prop:F14}
+With $L^{(\alpha)}_n$ the Laguerre polynomials,
+\begin{equation}\label{eq:F14}
+F(1,4)=e-2+e\sum_{k\ge1}\frac{2\binom{2k}{k}\Bigl[(k^2+k+1)L^{(1)}_{k-1}(-1)-(2k+1)L^{(2)}_{k-1}(-1)\Bigr]}{(k+1)^2(k+2)\,k\cdot k!},
+\end{equation}
+and $F(1,4)=8.08650858474357623748769777844\ldots$
+\end{proposition}
+
+\begin{proof}
+Gessel's single sum for the number $u_N$ of permutations of $[N]$ avoiding $1234$ is
+\[
+u_N=2\sum_{k=0}^N\binom{2k}{k}\binom Nk^2\frac{3k^2+2k+1-N-2Nk}{(k+1)^2(k+2)(N-k+1)},
+\]
+and $F(1,4)=\sum_Nu_N/N!$. Put $N=k+M$; then $\binom Nk^2/N!=N!/(k!^2M!^2)$ and $3k^2+2k+1-N-2Nk=(k^2+k+1)-(2k+1)M$, so
+\begin{gather*}
+F(1,4)=\sum_{k\ge0}\frac{2\binom{2k}k}{(k+1)^2(k+2)\,k!^2}\Bigl[(k^2+k+1)\,S_k-(2k+1)\,S'_k\Bigr],\\
+S_k=\sum_{M\ge0}\frac{(M+k)!}{M!\,(M+1)!},\qquad S'_k=\sum_{M\ge0}\frac{M\,(M+k)!}{M!\,(M+1)!}.
+\end{gather*}
+Now $S_k=k!\,{}_1F_1(k+1;2;1)$ and $S'_k=\sum_{L\ge0}\frac{(L+k+1)!}{L!(L+2)!}=\frac{(k+1)!}2{}_1F_1(k+2;3;1)$. Kummer's transformation ${}_1F_1(a;b;1)=e\,{}_1F_1(b-a;b;-1)$ and ${}_1F_1(-n;\alpha+1;x)=L^{(\alpha)}_n(x)/\binom{n+\alpha}n$ give, for $k\ge1$, $S_k=e\,(k-1)!\,L^{(1)}_{k-1}(-1)$ and $S'_k=e\,(k-1)!\,L^{(2)}_{k-1}(-1)$, and $(k-1)!/k!^2=1/(k\cdot k!)$. For $k=0$: $S_0=\sum1/(M+1)!=e-1$, $S'_0=\sum(M+1)/(M+2)!=1$, and the term is $\frac22[(e-1)-1]=e-2$. The numerical value agrees with the direct sum $\sum u_N/N!$ to $40$ digits (Appendix~\ref{app:prov}).
+\end{proof}
+
+\begin{computation}[integer-relation search]
+PSLQ with $40$ digits and coefficient bound $10^6$ finds no integer relation between $F(1,4)$ and $1,e,e^2,e^3,e^4,I_0(2),I_1(2)$ and the products of $e,e^2,e^3$ with $I_0(2),I_1(2)$. This is evidence, not a proof, that $F(1,4)$ has no closed form of the type of $F(1,3)$.
+\end{computation}
+
+\subsection{Values}
+
+\begin{table}[tbp]
+\centering\footnotesize
+\caption{$F(m,n)$ for $1\le m,n\le 10$, computed from \eqref{eq:Fint} by numerical quadrature of Fredholm determinants (nine decimals; independent of the series \eqref{eq:series}, with which it agrees to $10^{-9}$ wherever both were computed). Rows are $m$, columns are $n$; $F(m,n)=F(n,m)$, and only $n\ge m$ is printed. Columns $n=1,\dots,5$ above, $n=6,\dots,10$ below.}
+\label{tab:F}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{r|rrrrr}
+\toprule
+$m\backslash n$ & 1 & 2 & 3 & 4 & 5\\
+\midrule
+1 & 1.000000000 & 2.718281828 & 5.090678729 & 8.086508585 & 11.687153215\\
+2 &  & 6.090678729 & 10.203050874 & 15.028203476 & 20.541772050\\
+3 &  &  & 16.028203476 & 22.589890636 & 29.876023526\\
+4 &  &  &  & 30.876023526 & 39.897378552\\
+5 &  &  &  &  & 50.647251768\\
+\bottomrule
+\end{tabular}
+\medskip
+
+\begin{tabular}{r|rrrrr}
+\toprule
+$m\backslash n$ & 6 & 7 & 8 & 9 & 10\\
+\midrule
+1 & 15.879868844 & 20.655270830 & 26.006099415 & 31.926535882 & 38.411789930\\
+2 & 26.724787531 & 33.562333071 & 41.042394211 & 49.155072002 & 57.892050721\\
+3 & 37.871030873 & 46.560511769 & 55.931881563 & 65.974245572 & 76.678140786\\
+4 & 49.647251768 & 60.115119144 & 71.290112203 & 83.162003618 & 95.721451561\\
+5 & 62.131763170 & 74.346668433 & 87.284433827 & 100.936666875 & 115.295030978\\
+6 & 75.346668433 & 89.295907289 & 103.976555052 & 119.382967869 & 135.508502678\\
+7 &  & 104.976555052 & 121.391358672 & 138.538181576 & 156.412643445\\
+8 &  &  & 139.538181576 & 158.419047932 & 178.032328941\\
+9 &  &  &  & 179.032328941 & 200.379577918\\
+10 &  &  &  &  & 223.459512207\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The diagonal of Table~\ref{tab:F} exceeds the adjacent superdiagonal by exactly $1$ in every printed digit; this is the identity of the next section, proved in Section~\ref{sec:proof}.
+
+\section{The shift identity}\label{sec:identity}
+
+\subsection{Statement and equivalent forms}
+
+\begin{theorem}[Shift identity; proved]\label{thm:main}
+For every $k\ge2$, $T(k,k)$ has the same distribution as $T(k-1,k+1)+1$. In particular $F(k,k)=F(k-1,k+1)+1$.
+\end{theorem}
+
+The proof occupies Section~\ref{sec:proof}. This section collects the equivalent forms of the statement (Propositions~\ref{prop:equiv}, \ref{prop:cleanform}, \ref{prop:frobform}), two elementary proofs for $k=2$, the finite computations that check the theorem independently of the proof, and the computations showing that the identity has no neighbours.
+
+\begin{proposition}[proved]\label{prop:equiv}
+For fixed $k\ge2$ the following are equivalent, and each is equivalent to Theorem~\ref{thm:main} for that $k$. Here $A=\{\lambda:\lambda_k\le k-1\}$ (the box $(k,k)$ is absent; equivalently $\Durfee(\lambda)\le k-1$; equivalently $\lambda\in H(k-1,k-1)$) and $B=\{\lambda:\lambda_{k-1}\le k\}$ (the box $(k-1,k+1)$ is absent; equivalently $\lambda\in H(k-2,k)$).
+\begin{enumerate}[label=(\alph*)]
+\item (fat-hook form) $\ \#\{\pi\in S_{N+1}:\sh(\pi)\in H(k-1,k-1)\}=(N+1)\,\#\{\sigma\in S_N:\sh(\sigma)\in H(k-2,k)\}$ for all $N$.
+\item (Durfee form) $\ \Prob_{N+1}(\Durfee\ge k)=\Prob_N(\lambda_{k-1}\ge k+1)$ for all $N$.
+\item (arrival form) the $(N+1)$-st box of Plancherel growth is $(k,k)$ exactly as often as the $N$-th box is $(k-1,k+1)$:
+\[
+\frac1{(N+1)!}\sum_{\nu\vdash N}f_\nu f_{\nu+(k,k)}=\frac1{N!}\sum_{\nu\vdash N-1}f_\nu f_{\nu+(k-1,k+1)}\qquad(N\ge1),
+\]
+with $f_{\nu+b}=0$ when $b$ is not addable to $\nu$.
+\item (generating-function form) with $G_E(\theta)=e^\theta\Prob_\theta(E)=\sum_N\theta^N\Prob_N(E)/N!$,
+\[
+\frac{d}{d\theta}G_A(\theta)=G_B(\theta).
+\]
+\item (particle form) $\Prob_{N+1}(N_0\ge k)=\Prob_N(N_2\ge k-1)$ for all $N$.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+$\Prob(T(k,k)\le N+1)=\Prob_{N+1}(\lambda_k\ge k)$ and $\Prob(T(k-1,k+1)\le N)=\Prob_N(\lambda_{k-1}\ge k+1)$; so the statement of the theorem is (b), and (a) is (b) after complementing both events and multiplying by $(N+1)!$. (c): $\Prob(\text{box }N+1\text{ is }(k,k))=\Prob_{N+1}(\lambda_k\ge k)-\Prob_N(\lambda_k\ge k)$, and by \eqref{eq:plgrowth} this equals $\sum_{\nu\vdash N}\Pl_N(\nu)p(\nu\to\nu+(k,k))=\sum_\nu f_\nu f_{\nu+(k,k)}/(N+1)!$; likewise for the other box; so (c) is the difference of (b) at $N$ and at $N-1$, and conversely (b) follows from (c) by summation since both sides of (b) vanish for $N<k^2-1$. (d): multiply (b) by $\theta^N/N!$ and sum; $G_A'(\theta)=\sum_N\theta^N\Prob_{N+1}(A)/N!$ and $\Prob_{N+1}(A)=1-\Prob_{N+1}(\Durfee\ge k)$, $\Prob_N(B)=1-\Prob_N(\lambda_{k-1}\ge k+1)$, while $\frac{d}{d\theta}e^\theta=e^\theta$ takes care of the constants. (e): $\lambda_k\ge k$ iff $\lambda_k-k\ge0$ iff at least $k$ particles lie in $[0,\infty)$; $\lambda_{k-1}\ge k+1$ iff $\lambda_{k-1}-(k-1)\ge2$ iff at least $k-1$ particles lie in $[2,\infty)$.
+\end{proof}
+
+\begin{proposition}[proved]\label{prop:cleanform}
+Theorem~\ref{thm:main} for all $k\ge2$ is equivalent to each of the following.
+\begin{enumerate}[label=(\alph*)]
+\item For every $N$, $\Durfee(\lambda)$ under $\Pl_{N+1}$ has the same distribution as $1+\#\{i:\mu_i-i\ge2\}$ under $\Pl_N$; in symbols $\Durfee_{N+1}\overset{d}{=}\Durfee_N+1-n_0-n_1$, where $n_0=\mathbf 1[\exists i:\mu_i=i]$ and $n_1=\mathbf 1[\exists i:\mu_i=i+1]$.
+\item For all $z$ and $\theta$,
+\begin{equation}\label{eq:starstar}
+\E_\theta\bigl[z^{N_0}\,\mu_\lambda(\{0\})\bigr]=\E_\theta\bigl[z^{N_0}(1-n_0)(1-n_1)\bigr]-z^{-1}\E_\theta\bigl[z^{N_0}n_0n_1\bigr],
+\end{equation}
+where $\mu_\lambda(\{0\})=p(\lambda\to\lambda+(\Durfee+1,\Durfee+1))$ is the probability under \eqref{eq:plgrowth} that the next box lies on the diagonal ($0$ if the diagonal box is not addable).
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+(a) is Proposition~\ref{prop:equiv}(e) for all $k$ at once, since $N_2=N_0-n_0-n_1$ and $N_0=\Durfee$. For (b) we use the Frobenius form, Proposition~\ref{prop:frobform} below, whose proof is independent of this one: for each $k\ge2$ the statement of the theorem is equivalent to
+\begin{equation}\label{eq:Omegaform}
+\Omega_k=W_{k-1}[a_{k-1}\ge2]-W_k[a_{k-1}=1,a_k=0],
+\end{equation}
+in the notation there ($W_d[E]=e^\theta\Prob_\theta(\Durfee=d,\ E)$ and $\Omega_k=e^\theta\E_\theta[\mathbf 1_{\Durfee=k-1}\mu_\lambda(\{0\})]$). In particle language: $\Durfee=k-1$ and $a_{k-1}\ge2$ means $N_0=k-1$ and the smallest nonnegative particle sits at $\ge2$, i.e.\ $N_0=k-1$, $n_0=n_1=0$; $\Durfee=k$ with $a_{k-1}=1,a_k=0$ means $N_0=k$ with particles at $0$ and $1$. So \eqref{eq:Omegaform} reads
+\[
+\E_\theta\bigl[\mathbf 1_{N_0=k-1}\,\mu_\lambda(\{0\})\bigr]=\Prob_\theta(N_0=k-1,\ n_0=n_1=0)-\Prob_\theta(N_0=k,\ n_0=n_1=1),
+\]
+which is the coefficient of $z^{k-1}$ in \eqref{eq:starstar}; the coefficient of $z^0$ in \eqref{eq:starstar} is $\Prob(\lambda=\varnothing)$ on both sides. Hence \eqref{eq:starstar} holds identically in $z$ iff \eqref{eq:Omegaform} holds for all $k\ge2$.
+\end{proof}
+
+\subsection{The case $k=2$}
+
+\begin{theorem}[proved]\label{thm:k2}
+$T(2,2)\overset{d}{=}T(1,3)+1$. Hence $F(2,2)=F(1,3)+1$.
+\end{theorem}
+
+\begin{proof}
+The shapes of size $N+1$ without the box $(2,2)$ are the hooks $(a+1,1^b)$, $a+b=N$. A standard tableau of hook shape is determined by the set of entries in its leg, any $b$-subset of $\{2,\dots,N+1\}$, so $f_{(a+1,1^b)}=\binom Nb$. Hence
+\[
+\Prob(T(2,2)>N+1)=\frac1{(N+1)!}\sum_{b=0}^N\binom Nb^2=\frac{\binom{2N}N}{(N+1)!}=\frac{C_N}{N!}=\Prob_N(\lambda_1\le2)=\Prob(T(1,3)>N),
+\]
+using the Vandermonde identity $\sum_b\binom Nb^2=\binom{2N}N$, the relation $\binom{2N}N=(N+1)C_N$, and the fact that $C_N$ counts the permutations of $[N]$ with no increasing subsequence of length $3$ (equivalently, by Robinson--Schensted, $\sum_{\lambda\vdash N,\lambda_1\le2}f_\lambda^2=C_N$).
+\end{proof}
+
+\begin{remark}
+The step $\binom{2N}N=(N+1)C_N$ has the Chung--Feller $(N+1)$-to-one correspondence between lattice paths and Dyck paths behind it; combined with the encodings of pairs of hook tableaux by pairs of subsets and of pairs of two-column tableaux by Dyck paths, this yields a bijective proof of Proposition~\ref{prop:equiv}(a) for $k=2$. No bijection avoiding Robinson--Schensted is known.
+\end{remark}
+
+A second proof, through Frobenius coordinates, is in Section~\ref{sec:frobenius}; a third, valid on a one-parameter family, is Theorem~\ref{thm:k2z}.
+
+\subsection{Independent computational checks}
+
+\begin{computation}[verified by finite computation]\label{comp:main}
+The fat-hook identity, Proposition~\ref{prop:equiv}(a), holds in exact integer arithmetic for
+\[
+k=2,3,4,5\text{ and all }N\le70,\qquad k=6,7\text{ and all }N\le52 .
+\]
+Both sides equal $(N+1)!$ for $N<k^2-1$; the nontrivial range for $k=7$ begins at $N=48$. Independently, the Fredholm integrals \eqref{eq:Fint} give $F(k,k)-F(k-1,k+1)=1$ to nine decimals for $2\le k\le9$ (Table~\ref{tab:F}); this computation nowhere assumes $F(m,n)=F(n,m)$, and its output is symmetric, a further check on it. Both computations are independent of the proof in Section~\ref{sec:proof}, which uses neither the hook formula for individual shapes nor the Bessel kernel.
+\end{computation}
+
+\subsection{The identity is isolated}
+
+\begin{computation}[verified by finite computation]\label{comp:rigid}
+Let $c_{m,n}(N)=\#\{\pi\in S_N:\ \sh(\pi)_m\le n-1\}$.
+\begin{enumerate}[label=(\roman*)]
+\item For $(m,n)\in\{(2,2),(2,3),(3,3),(2,4),(3,4)\}$, the null space of the linear map $(\alpha_{m',n'})\mapsto\bigl(c_{m,n}(N+1)-(N+1)\sum_{m',n'}\alpha_{m',n'}c_{m',n'}(N)\bigr)_{N<31}$, with $(m',n')$ ranging over the $3\times3$ neighbourhood of $(m,n)$, consists exactly of the transposition symmetry $c_{m',n'}=c_{n',m'}$ and, for $m=n$, the shift identity. There is no off-diagonal analogue and no averaged analogue.
+\item The same search on the arrival probabilities $p_N(i,j)=\Prob(\text{the $N$-th box is }(i,j))$, allowing the time shifts $N$ and $N-1$, finds nothing beyond the symmetry and the shift identity.
+\item Replacing the weight $f_\lambda^2$ by $f_\lambda$ (involutions), by $f_\lambda s_\lambda(1^3)$ (random words), or by $s_\lambda(1^n)^2$, $n=3,4$, destroys the identity already for $k=3$ and $N\le14$.
+\item The identity is not an identity of symmetric functions: for $k=2$ the edge sum
+\[
+\sum_{\mu\lessdot\lambda}s_\mu(x)s_\lambda(y)\bigl(\mathbf 1[\lambda\in A]-\mathbf 1[\mu\in B]\bigr)
+\]
+is nonzero as a symmetric function (the shape $\lambda=(5,1)$ already contributes), and vanishes only after specializing both $x$ and $y$ to the exponential specialization.
+\item The generating-function form \eqref{eq:starstar} with $0$ replaced by $s\in\{-2,-1,1,2\}$ (and $n_0,n_1,N_0$ by $n_s,n_{s+1},N_s$) is false.
+\end{enumerate}
+\end{computation}
+
+\subsection{The Frobenius form and a second proof for $k=2$}\label{sec:frobenius}
+
+\begin{definition}
+Write $\lambda=(a_1,\dots,a_d\mid b_1,\dots,b_d)$ in Frobenius coordinates: $d=\Durfee(\lambda)$, $a_i=\lambda_i-i$, $b_i=\lambda'_i-i$ for $i\le d$, so $a_1>\cdots>a_d\ge0$, $b_1>\cdots>b_d\ge0$, $|\lambda|=\sum_i(a_i+b_i+1)$. Then
+\begin{equation}\label{eq:frobF}
+F(\lambda)=\frac{f_\lambda}{|\lambda|!}=\frac{\prod_{i<j}(a_i-a_j)(b_i-b_j)}{\prod_ia_i!\prod_jb_j!\prod_{i,j}(a_i+b_j+1)},
+\end{equation}
+Frobenius's formula (checked against the hook formula for all $|\lambda|\le12$). If $\Durfee(\mu)=k-1$ and $(k,k)$ is addable to $\mu$, then $\mu+(k,k)=(a_1,\dots,a_{k-1},0\mid b_1,\dots,b_{k-1},0)$, and comparing the two instances of \eqref{eq:frobF} factor by factor,
+\[
+F(\mu+(k,k))=F(\mu)\,R(\mu),\qquad R(\mu)=\prod_{i=1}^{k-1}\frac{a_i}{a_i+1}\prod_{j=1}^{k-1}\frac{b_j}{b_j+1}:
+\]
+the new Vandermonde factors are $\prod_ia_i\prod_jb_j$, the new factorials are $0!=1$, and the new denominators are $\prod_i(a_i+0+1)\prod_j(0+b_j+1)\cdot(0+0+1)$. $R(\mu)=0$ exactly when $a_{k-1}=0$ or $b_{k-1}=0$, i.e.\ when $(k,k)$ is not addable.
+\end{definition}
+
+\begin{proposition}[proved]\label{prop:frobform}
+Let $W_d(\theta)=\sum_{\Durfee(\lambda)=d}\theta^{|\lambda|}F(\lambda)^2=e^\theta\Prob_\theta(\Durfee=d)$, let $W_d[E]$ be the same sum restricted by a condition $E$, and $\Omega_k=\sum_{\Durfee(\mu)=k-1}\theta^{|\mu|}F(\mu)F(\mu+(k,k))$. Theorem~\ref{thm:main} for a given $k$ is equivalent to \eqref{eq:Omegaform}, i.e.\ to the identity of power series in $\theta$
+\begin{equation}\label{eq:frob}
+\sum_{\Durfee(\mu)=k-1}\theta^{|\mu|}F(\mu)^2\bigl[R(\mu)-\mathbf 1[a_{k-1}\ge2]\bigr]
++\sum_{\substack{\Durfee(\lambda)=k\\ a_{k-1}=1,\ a_k=0}}\theta^{|\lambda|}F(\lambda)^2=0 .
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Since $\sum_{\mu\lessdot\lambda}F(\mu)=|\lambda|F(\lambda)$ (from $\sum_{\mu\lessdot\lambda}f_\mu=f_\lambda$) and $\sum_{\lambda\gtrdot\mu}F(\lambda)=F(\mu)$ (from $\sum_{\lambda\gtrdot\mu}f_\lambda=(|\mu|+1)f_\mu$),
+\[
+W_d'=\sum_{\Durfee(\lambda)=d}|\lambda|\theta^{|\lambda|-1}F(\lambda)^2=\sum_{\Durfee(\lambda)=d}\ \sum_{\mu\lessdot\lambda}\theta^{|\mu|}F(\mu)F(\lambda),
+\qquad
+W_d=\sum_{\Durfee(\mu)=d}\ \sum_{\lambda\gtrdot\mu}\theta^{|\mu|}F(\mu)F(\lambda).
+\]
+Both are sums over edges $\mu\lessdot\lambda$ of Young's lattice with weight $\theta^{|\mu|}F(\mu)F(\lambda)$; an edge changes the Durfee side by $0$ or $1$, and by $1$ exactly when the added box is diagonal. Hence $W_d'-W_d=\Omega_d-\Omega_{d+1}$, where $\Omega_d$ is the weight of the edges adding the box $(d,d)$, and $\sum_{d=0}^{k-1}(W_d'-W_d)=\Omega_0-\Omega_k=-\Omega_k$. In Proposition~\ref{prop:equiv}(d), $G_A=\sum_{d\le k-1}W_d$, and $B=\{\lambda_{k-1}\le k\}$ decomposes by Durfee side: if $\Durfee\le k-2$ the condition is automatic; if $\Durfee=k-1$ it reads $a_{k-1}\le1$; if $\Durfee=k$ it reads $a_{k-1}\le1$, which with $a_{k-1}>a_k\ge0$ forces $a_{k-1}=1,a_k=0$; if $\Durfee\ge k+1$ it is impossible. So $G_B=\sum_{d\le k-2}W_d+W_{k-1}[a_{k-1}\le1]+W_k[a_{k-1}=1,a_k=0]$, and
+\begin{align*}
+G_A'-G_B&=\sum_{d\le k-1}(W_d'-W_d)+W_{k-1}[a_{k-1}\ge2]-W_k[a_{k-1}=1,a_k=0]\\
+&=-\Omega_k+W_{k-1}[a_{k-1}\ge2]-W_k[a_{k-1}=1,a_k=0],
+\end{align*}
+which is \eqref{eq:Omegaform}; \eqref{eq:frob} is the same with $\Omega_k$ written through $R$.
+\end{proof}
+
+\begin{proof}[Second proof of Theorem~\ref{thm:k2}]
+Take $k=2$ in \eqref{eq:frob}. The shapes with $\Durfee=1$ are the hooks $(a\mid b)=(a+1,1^b)$ with $F(a\mid b)=\frac{1}{a!\,b!\,(a+b+1)}$ and $R=\frac{ab}{(a+1)(b+1)}$; the shapes with $\Durfee=2$, $a_1=1$, $a_2=0$ are $(1,0\mid b_1,b_2)$, $b_1>b_2\ge0$, with, by \eqref{eq:frobF},
+\begin{align*}
+F(1,0\mid b_1,b_2)&=\frac{(1-0)(b_1-b_2)}{1!\,0!\,b_1!\,b_2!\,(1+b_1+1)(1+b_2+1)(0+b_1+1)(0+b_2+1)}\\
+&=\frac{b_1-b_2}{(b_1+2)!\,(b_2+2)!}.
+\end{align*}
+The coefficient of $\theta^{m+1}$ in \eqref{eq:frob} is $S_1-S_2+S_3$ with
+\[
+S_1=\sum_{a+b=m}\frac{ab}{(a+1)(b+1)}\cdot\frac{1}{\bigl(a!\,b!\,(m+1)\bigr)^2},\qquad
+S_2=\sum_{\substack{a+b=m\\ a\ge2}}\frac{1}{\bigl(a!\,b!\,(m+1)\bigr)^2},
+\]
+\[
+S_3=\sum_{\substack{b_1+b_2=m-2\\ b_1>b_2\ge0}}\frac{(b_1-b_2)^2}{\bigl((b_1+2)!\,(b_2+2)!\bigr)^2}.
+\]
+For $m\le1$ all three sums vanish ($R=0$ when $a=0$ or $b=0$; no $a\ge2$; $S_3$ empty). Let $m\ge2$.
+
+\emph{$S_1$.} Since $\frac{a}{(a+1)\,a!^2}=\frac{1}{(a-1)!\,(a+1)!}$ for $a\ge1$ and the term vanishes for $a=0$ or $b=0$,
+\[
+S_1=\frac1{(m+1)^2}\sum_{\substack{a+b=m\\ a,b\ge1}}\frac{1}{(a-1)!\,(a+1)!\,(b-1)!\,(b+1)!}
+\]
+\[
+\phantom{S_1}=\frac{1}{(m+1)^2\,(m-2)!\,(m+2)!}\sum_{a}\binom{m-2}{a-1}\binom{m+2}{a+1}
+=\frac{\binom{2m}m}{(m+1)^2\,(m-2)!\,(m+2)!},
+\]
+by the Vandermonde convolution $\sum_j\binom{m-2}{j}\binom{m+2}{m-j}=\binom{2m}m$ (with $j=a-1$, $\binom{m+2}{a+1}=\binom{m+2}{m-j}$).
+
+\emph{$S_2$.} $\displaystyle S_2=\frac{1}{(m+1)^2m!^2}\Bigl[\sum_{a=0}^m\binom ma^2-\binom m0^2-\binom m1^2\Bigr]=\frac{\binom{2m}m-1-m^2}{(m+1)^2\,m!^2}$.
+
+\emph{$S_3$.} Put $v=b_1+2$, $w=b_2+2$, $M=m+2$, so $v+w=M$, $v,w\ge2$, and the summand is $(v-w)^2/(v!\,w!)^2$; it vanishes for $v=w$, so $S_3$ is half the sum over ordered pairs $(v,w)$ with $v,w\ge2$. Over all ordered pairs with $v+w=M$,
+\[
+\sum_{v=0}^M\frac{(2v-M)^2}{(v!\,(M-v)!)^2}=\frac{1}{M!^2}\sum_v\binom Mv^2(2v-M)^2
+\]
+\[
+=\frac{1}{M!^2}\Bigl[4M^2\binom{2M-2}{M-1}-4M\cdot\frac M2\binom{2M}M+M^2\binom{2M}M\Bigr]
+=\frac{M^2}{M!^2}\Bigl[4\binom{2M-2}{M-1}-\binom{2M}M\Bigr],
+\]
+using $\sum_v\binom Mv^2=\binom{2M}M$, $\sum_vv\binom Mv^2=\frac M2\binom{2M}M$, $\sum_vv^2\binom Mv^2=M^2\binom{2M-2}{M-1}$ (the last two from $v\binom Mv=M\binom{M-1}{v-1}$ and Vandermonde). Since $\binom{2M}M=\frac{2(2M-1)}M\binom{2M-2}{M-1}$, the bracket is $\frac2M\binom{2M-2}{M-1}$, and the full sum is $\frac{2M}{M!^2}\binom{2M-2}{M-1}$. The excluded pairs $(0,M),(M,0)$ contribute $2M^2/M!^2=2/(M-1)!^2$ and $(1,M-1),(M-1,1)$ contribute $2(M-2)^2/(M-1)!^2$. Hence
+\[
+S_3=\frac{M}{M!^2}\binom{2M-2}{M-1}-\frac{1+(M-2)^2}{(M-1)!^2}
+=\frac{(m+2)\binom{2m+2}{m+1}}{(m+2)!^2}-\frac{1+m^2}{(m+1)!^2}.
+\]
+
+\emph{Conclusion.} Multiply $S_1-S_2+S_3$ by $(m+1)!^2$:
+\[
+(m+1)!^2S_1=\frac{m!^2\binom{2m}m}{(m-2)!\,(m+2)!}=\binom{2m}m\frac{m(m-1)}{(m+1)(m+2)},
+\]
+\[
+(m+1)!^2S_2=\binom{2m}m-1-m^2,\qquad
+(m+1)!^2S_3=\frac{\binom{2m+2}{m+1}}{m+2}-1-m^2 .
+\]
+So $(m+1)!^2(S_1-S_2+S_3)=\binom{2m}m\Bigl[\frac{m(m-1)}{(m+1)(m+2)}-1\Bigr]+\frac{\binom{2m+2}{m+1}}{m+2}$. The bracket is $\frac{m^2-m-m^2-3m-2}{(m+1)(m+2)}=-\frac{2(2m+1)}{(m+1)(m+2)}$, and $\binom{2m+2}{m+1}=\frac{(2m+2)(2m+1)}{(m+1)^2}\binom{2m}m=\frac{2(2m+1)}{m+1}\binom{2m}m$. The two terms cancel.
+\end{proof}
+
+\section{The line $z+z'=-2$ of $z$-measures}\label{sec:zline}
+
+\subsection{$z$-measures and the reflection $c\mapsto2-c$}
+
+\begin{definition}[Kerov--Olshanski--Vershik $z$-measures]
+For parameters $z,z'$ with $zz'\notin\{0,-1,-2,\dots\}$ put
+\[
+M^{(N)}_{z,z'}(\lambda)=\frac{N!}{(zz')_N}\prod_{\square\in\lambda}\bigl(z+c(\square)\bigr)\bigl(z'+c(\square)\bigr)\Bigl(\frac{f_\lambda}{N!}\Bigr)^2\quad(\lambda\vdash N),
+\]
+where $(x)_N=x(x+1)\cdots(x+N-1)$. Let $\rho_z$ be the specialization of the ring of symmetric functions with $p_k\mapsto z$ for all $k\ge1$; then $s_\lambda(\rho_z)=\prod_\square(z+c(\square))/H_\lambda$ (Appendix~\ref{app:hyper}, \ref{H:hook}), so $M^{(N)}_{z,z'}(\lambda)=s_\lambda(\rho_z)s_\lambda(\rho_{z'})/Z_N$ with $Z_N=(zz')_N/N!$, the degree-$N$ coefficient of the Cauchy product $\exp\bigl(\sum_kp_k(\rho_z)p_k(\rho_{z'})q^k/k\bigr)=\exp(-zz'\log(1-q))=(1-q)^{-zz'}$. The Plancherel measure is the limit $z,z'\to\infty$ (each weight is $(zz')^NF(\lambda)^2(1+O(1/z))$). The family is symmetric in $(z,z')$ and satisfies $M_{-z,-z'}(\lambda)=M_{z,z'}(\lambda')$, since conjugation negates contents. The measures form a coherent family on Young's lattice with up-transition probabilities
+\begin{equation}\label{eq:zgrowth}
+p_{z,z'}(\mu\to\mu+\square)=\frac{(z+c)(z'+c)}{zz'+N}\cdot\frac{f_{\mu+\square}}{(N+1)f_\mu},\qquad c=c(\square),\ |\mu|=N,
+\end{equation}
+which sum to $1$ by Kerov's sum rule $\sum_{\lambda\gtrdot\mu}(z+c)(z'+c)f_\lambda/f_\mu=(N+1)(zz'+N)$, itself the statement that Kerov's transition measure of $\mu$ (the measure putting mass $f_\lambda/((N+1)f_\mu)$ at the content of $\lambda/\mu$) has total mass $1$, mean $0$ and variance $|\mu|$.
+\end{definition}
+
+On the line $z'=-z-2$ put $t=(z+1)^2$; then
+\begin{equation}\label{eq:weight}
+(z+c)(z'+c)=(c-1)^2-t,\qquad zz'=1-t,\qquad Z_N(t)=\frac{(1-t)_N}{N!},
+\end{equation}
+so the content weight depends on $c$ only through $(c-1)^2$: it is invariant under the reflection $c\mapsto2-c$ of contents, which is the reflection $(i,j)\mapsto(j-1,i+1)$ of the plane across the line $j=i+1$, and which sends the box $(k,k)$ to $(k-1,k+1)$. Write $M_t$ for $M_{z,-z-2}$ and
+\[
+w_t(\lambda)=\prod_{\square\in\lambda}\bigl((c(\square)-1)^2-t\bigr)\Big/H_\lambda^2,\qquad M^{(N)}_t(\lambda)=w_t(\lambda)/Z_N(t).
+\]
+
+\begin{conjecture}[Shift identity on the line]\label{conj:zline}
+For all $k\ge2$, all $N$, and all $t$ (as an identity of rational functions of $t$),
+\begin{equation}\label{eq:zline}
+\frac{N+1}{N+1-t}\sum_{\substack{\lambda\vdash N+1\\ \lambda_k\ge k}}w_t(\lambda)=\sum_{\substack{\mu\vdash N\\ \mu_{k-1}\ge k+1}}w_t(\mu),
+\qquad\text{i.e.}\qquad M^{(N+1)}_t(\Durfee\ge k)=M^{(N)}_t(\mu_{k-1}\ge k+1),
+\end{equation}
+the factor $\frac{N+1}{N+1-t}$ being $Z_N(t)/Z_{N+1}(t)$.
+\end{conjecture}
+
+\begin{remark}[Status]\label{rem:zlinestatus}
+Conjecture~\ref{conj:zline} has been proved in Lean; see Appendix~\ref{app:formal}. The proof is a
+formalization of the argument sketched in Section~\ref{sec:open}: the two determinants of
+Remark~\ref{rem:giambelliz}, the recurrences and differential equations for the resolvent of
+$H_zH_{z'}^{\mathsf T}$, five first integrals of the resulting system, and closed forms for the
+entries $\mathcal G_{00}$, $\mathcal G_{01}$, $\mathcal G_{11}$. It is not reproduced here, it has
+not been written out in human-readable form, and the author has not rebuilt it from source; the
+statement is therefore left labelled as a conjecture in this version. Independently of the
+formalization, \eqref{eq:zline} is verified for every $k$ and all $N\le25$ at twelve values of $t$
+(Computation~\ref{comp:zline}(iii)).
+\end{remark}
+
+\begin{proposition}[proved]\label{prop:topcoef}
+Conjecture~\ref{conj:zline} for a given $(k,N)$ implies Theorem~\ref{thm:main} for the same $(k,N)$: after clearing denominators, \eqref{eq:zline} is a polynomial identity in $t$ of degree at most $2N+1$, and Theorem~\ref{thm:main} is the comparison of its leading coefficients. Conversely, for fixed $(k,N)$, \eqref{eq:zline} is equivalent to the identity for the $2N+2$ values $t=m^2$, $m=1,\dots,2N+2$.
+\end{proposition}
+
+\begin{proof}
+Multiply \eqref{eq:zline} by $Z_N(t)Z_{N+1}(t)\cdot\frac{N+1-t}{N+1}$: the left side becomes $Z_N(t)\sum_Aw_t(\lambda)$, of degree $\le N+(N+1)$, and the right side $Z_{N+1}(t)\sum_Bw_t(\mu)$, with the same degree bound. Since $w_t(\lambda)=(-t)^{|\lambda|}F(\lambda)^2(1+O(1/t))$ and $Z_N(t)=(-t)^N(1+O(1/t))/N!$, the leading coefficients are $\pm\sum_{\lambda\in A}F(\lambda)^2/N!$ and $\pm\sum_{\mu\in B}F(\mu)^2/(N+1)!$ with the same sign, and their equality is Proposition~\ref{prop:equiv}(a). A polynomial of degree $\le2N+1$ is determined by $2N+2$ values.
+\end{proof}
+
+\begin{computation}[verified by finite computation]\label{comp:zline}
+\begin{enumerate}[label=(\roman*)]
+\item Symbolically in $z$, \eqref{eq:zline} holds for $k=2$ and $3\le N\le17$; for $k=3$ and $8\le N\le17$; for $k=4$ and $15\le N\le17$.
+\item For general $(z,z')$ the difference $M^{(N+1)}_{z,z'}(\Durfee\ge k)-M^{(N)}_{z,z'}(\lambda_{k-1}\ge k+1)$ is a nonzero rational function divisible by $z+z'+2$; verified for $k=2$, $N\le12$; $k=3$, $N\le14$; $k=4$, $N=15,16$.
+\item At the twelve values $t=-100,-3,-7/3,-23/10,-1,1/1000,1/3,7/11,5/2,4,9,16$, for all $k$ and all $N\le25$: by enumeration of partitions, with $f_\lambda$ from the hook length formula and $w_t$ from contents, in exact rational arithmetic; this is an independent implementation, sharing no code with (i) or (ii).
+\end{enumerate}
+\end{computation}
+
+\begin{remark}[Special points of the line]
+(1) $t=m^2$, i.e.\ $(z,z')=(m-1,-m-1)$, $m\ge1$: by the hook-content formulas $\prod_\square(m-1+c)/H_\lambda=s_\lambda(1^{m-1})$ and $\prod_\square(m+1-c)/H_\lambda=s_{\lambda'}(1^{m+1})$, $M^{(N)}_{m^2}(\lambda)=s_\lambda(1^{m-1})s_{\lambda'}(1^{m+1})/\binom{m^2-1}N$, the distribution of the dual RSK shape of a uniformly random $N$-subset of an $(m-1)\times(m+1)$ grid (Section~\ref{sec:grid}); the normalization is the dual Cauchy identity $\sum_{|\lambda|=N}s_\lambda(1^a)s_{\lambda'}(1^b)=\binom{ab}N$. (2) $t<0$, i.e.\ $z=-1+iy$, $z'=\bar z$: the principal series of $z$-measures with $\operatorname{Re}z=-1$. (3) $t=0$: the weight vanishes on any shape containing a box of content $1$, so the measure lives on single columns, and the identity is trivial.
+\end{remark}
+
+\subsection{The case $k=2$ on the line}
+
+For $k=2$ the complementary events are ``hook'' and ``at most two columns''. With
+\[
+h_{N+1}(t)=\sum_{\lambda\vdash N+1\ \text{a hook}}w_t(\lambda),\qquad c_N(t)=\sum_{\mu\vdash N,\ \mu_1\le2}w_t(\mu),
+\]
+and $Z_{N+1}=Z_N\cdot\frac{N+1-t}{N+1}$, the identity \eqref{eq:zline} for $k=2$ reads, after complementing,
+\begin{equation}\label{eq:k2zline}
+(N+1)\,h_{N+1}(t)=(N+1-t)\,c_N(t)\qquad(N\ge0).
+\end{equation}
+Neither side has a closed form: for $N=3,\dots,9$ the factorization of $c_N(t)$ over $\mathbb Q$ contains an irreducible factor of growing degree, shared with $h_{N+1}(t)$.
+
+\begin{theorem}[proved]\label{thm:k2z}
+\eqref{eq:k2zline} holds for all $N$ and $t$; hence Conjecture~\ref{conj:zline} holds for $k=2$.
+\end{theorem}
+
+The proof expresses both sides through one function.
+
+\begin{definition}\label{def:y}
+Let $s$ be a square root of $t$ and
+\[
+y(x)=\F{-s}{s}{1}{x}=\sum_{n\ge0}\frac{(-s)_n(s)_n}{n!^2}x^n=\sum_{n\ge0}\frac{\prod_{j=0}^{n-1}(j^2-t)}{n!^2}x^n ,
+\]
+a power series in $x$ whose coefficients are polynomials in $t$ (so $y$ does not depend on the choice of the root $s$). It satisfies the hypergeometric equation with $(a,b,c)=(-s,s,1)$, $x(1-x)y''+[c-(a+b+1)x]y'-ab\,y=0$, i.e.
+\begin{equation}\label{eq:ode}
+x(1-x)\,y''+(1-x)\,y'+t\,y=0,\qquad\text{equivalently}\qquad x\,y''=-y'-\frac{t\,y}{1-x}.
+\end{equation}
+$\vartheta=x\,d/dx$ acts on power series by $\vartheta x^n=nx^n$. ``Reducing modulo \eqref{eq:ode}'' means replacing every $y''$ by $-y'/x-ty/(x(1-x))$; the result is a polynomial in $y,y'$ with coefficients in $\mathbb Q(x,s)$. The facts about ${}_2F_1$ used below (Euler's transformation, the derivative formula, the contiguous relation) are listed with references in Appendix~\ref{app:hyper}.
+\end{definition}
+
+\begin{lemma}[Hooks; proved]\label{lem:hooks}
+$\displaystyle\sum_{N\ge0}(N+1)^2\,h_{N+1}(t)\,x^N=(1-t)\,y(x)\,A_2(x)$, where
+\[
+A_2(x)=\F{2-s}{2+s}{1}{x}=\sum_{n\ge0}\frac{(2-s)_n(2+s)_n}{n!^2}x^n=\sum_{n\ge0}\frac{\prod_{j=2}^{n+1}(j^2-t)}{n!^2}x^n .
+\]
+\end{lemma}
+
+\begin{proof}
+For the hook $(a+1,1^b)$, $a+b=N$: the hook lengths are $a+b+1$ at the corner, $a,a-1,\dots,1$ along the arm and $b,\dots,1$ along the leg, so $H=(N+1)\,a!\,b!$. The contents of the first row are $0,1,\dots,a$ and those of the boxes below the corner are $-1,\dots,-b$, so
+\[
+\prod_\square\bigl((c-1)^2-t\bigr)=\prod_{c=0}^a\bigl((c-1)^2-t\bigr)\prod_{c=1}^{b}\bigl((c+1)^2-t\bigr)=(1-t)\prod_{j=0}^{a-1}(j^2-t)\prod_{j=2}^{b+1}(j^2-t).
+\]
+Hence $(N+1)^2w_t(a+1,1^b)=(1-t)\cdot\frac{\prod_{j<a}(j^2-t)}{a!^2}\cdot\frac{\prod_{j=2}^{b+1}(j^2-t)}{b!^2}$, and summing over $a+b=N$ is the Cauchy product of the coefficient sequences of $y$ and $A_2$.
+\end{proof}
+
+\begin{lemma}[Gessel's determinant for two columns; proved]\label{lem:gessel2}
+For any two specializations $\rho,\rho'$ of the ring of symmetric functions and a formal variable $x$,
+\begin{equation}\label{eq:gessel2}
+\sum_{\lambda:\ \lambda_1\le2}s_\lambda(\rho)s_\lambda(\rho')\,x^{|\lambda|}=c_0^2-c_1c_{-1},
+\end{equation}
+\[
+c_0=\sum_{m\ge0}x^m\,e_m(\rho)\,e_m(\rho'),\qquad
+c_1=\sum_{m\ge0}x^{m+1}\,e_{m+1}(\rho)\,e_m(\rho'),\qquad
+c_{-1}=\sum_{m\ge0}x^{m}\,e_m(\rho)\,e_{m+1}(\rho').
+\]
+\end{lemma}
+
+\begin{proof}
+Shapes with $\lambda_1\le2$ are conjugate to shapes $\lambda'=(\mu_1,\mu_2)$ with at most two parts, $\mu_1\ge\mu_2\ge0$, and the dual Jacobi--Trudi formula (Appendix~\ref{app:hyper}, \ref{H:hook}) gives $s_\lambda=\det\bigl(e_{\mu_i-i+j}\bigr)_{i,j=1,2}$ with $e_r=0$ for $r<0$. Put $k_i=\mu_i-i$; the pairs $k_1>k_2$ with $k_2\ge-2$ are in bijection with the shapes, and rows with $k\le-3$ vanish, so $(k_1,k_2)$ may range over all pairs of integers with $k_1>k_2$. Let $E$ be the matrix with rows indexed by $k\in\Z$ and columns $j=1,2$, entries $E_{kj}=x^{k+j}e_{k+j}(\rho)$, and $E'$ the matrix with entries $E'_{kj}=e_{k+j}(\rho')$. Then $\det E_{\{k_1,k_2\}}=x^{(k_1+1)+(k_2+2)}\det(e_{k_i+j}(\rho))=x^{|\lambda|}s_\lambda(\rho)$ (each row $k$ carries $x^{k+1}$ from column $1$ or $x^{k+2}$ from column $2$, and each term of the determinant uses both columns once, so the total power is $k_1+k_2+3=\mu_1+\mu_2$), while $\det E'_{\{k_1,k_2\}}=s_\lambda(\rho')$. The Cauchy--Binet formula gives
+\[
+\sum_{k_1>k_2}\det E_{\{k_1,k_2\}}\det E'_{\{k_1,k_2\}}=\det\bigl(E^{\mathsf T}E'\bigr),\qquad
+\bigl(E^{\mathsf T}E'\bigr)_{jj'}=\sum_{k\in\Z}x^{k+j}e_{k+j}(\rho)e_{k+j'}(\rho').
+\]
+With $m=k+j$: the $(1,1)$ entry is $\sum_mx^me_m(\rho)e_m(\rho')=c_0$; the $(2,2)$ entry is $\sum_mx^{m}e_m(\rho)e_m(\rho')=c_0$ as well ($m=k+2$); the $(1,2)$ entry is $\sum_mx^me_m(\rho)e_{m+1}(\rho')=c_{-1}$ ($m=k+1$); the $(2,1)$ entry is $\sum_mx^{m+1}e_{m+1}(\rho)e_m(\rho')=c_1$ (with $m=k+1$). So the determinant is $c_0^2-c_1c_{-1}$.
+\end{proof}
+
+\begin{lemma}[Two columns; proved]\label{lem:twocol}
+$\displaystyle\sum_{N\ge0}c_N(t)\,x^N=\frac{y(x)^2}{1-x}+\frac{x\,y'(x)^2}{t}$.
+\end{lemma}
+
+\begin{proof}
+\emph{Step 1: the three series.} Take $\rho=\rho_z$, $\rho'=\rho_{z'}$ with $z'=-z-2$ in Lemma~\ref{lem:gessel2}, so that $s_\lambda(\rho)s_\lambda(\rho')=w_t(\lambda)$ and the left side of \eqref{eq:gessel2} is $\sum_Nc_N(t)x^N$. Since $\sum_me_m(\rho_z)q^m=\exp\bigl(\sum_k(-1)^{k-1}p_k(\rho_z)q^k/k\bigr)=\exp(z\log(1+q))=(1+q)^z$, we have $e_m(\rho_z)=\binom zm=\frac{(-1)^m(-z)_m}{m!}$, and $e_m(\rho_{z'})=\frac{(-1)^m(-z')_m}{m!}=\frac{(-1)^m(z+2)_m}{m!}$. With $s=z+1$, i.e.\ $-z=1-s$ and $z+2=1+s$:
+\begin{align*}
+c_0&=\sum_m\frac{(1-s)_m(1+s)_m}{m!^2}x^m=\F{1-s}{1+s}{1}{x},\\
+c_1&=\sum_m x^{m+1}\frac{(-1)^{m+1}(1-s)_{m+1}}{(m+1)!}\cdot\frac{(-1)^m(1+s)_m}{m!}\\
+&=-(1-s)\,x\sum_m\frac{(2-s)_m(1+s)_m}{(m+1)!\,m!}x^m=x(s-1)\,\F{2-s}{1+s}{2}{x},\\
+c_{-1}&=\sum_m x^{m}\frac{(-1)^m(1-s)_m}{m!}\cdot\frac{(-1)^{m+1}(1+s)_{m+1}}{(m+1)!}\\
+&=-(1+s)\sum_m\frac{(1-s)_m(2+s)_m}{m!\,(m+1)!}x^m=-(1+s)\,\F{1-s}{2+s}{2}{x},
+\end{align*}
+using $(\alpha)_{m+1}=\alpha\,(\alpha+1)_m$ and $(2)_m=(m+1)!$. Writing $F=\F{1-s}{2+s}{2}{x}$ and $G=\F{2-s}{1+s}{2}{x}$,
+\[
+\sum_Nc_Nx^N=c_0^2-c_1c_{-1}=c_0^2+(s-1)(1+s)\,x\,FG=c_0^2-(1-t)\,x\,FG .
+\]
+
+\emph{Step 2: Euler's transformation} $\F abcx=(1-x)^{c-a-b}\F{c-a}{c-b}cx$. For $c_0$: $c-a-b=1-2=-1$, $c-a=s$, $c-b=-s$, so $c_0=(1-x)^{-1}\F s{-s}1x=y/(1-x)$. For $F$: $c-a-b=2-3=-1$, $(c-a,c-b)=(1+s,-s)$, so $F=(1-x)^{-1}U$ with $U=\F{-s}{1+s}{2}{x}$. For $G$: $c-a-b=-1$, $(c-a,c-b)=(s,1-s)$, so $G=(1-x)^{-1}\tilde U$ with $\tilde U=\F{s}{1-s}{2}{x}$, which is $U$ with $s$ replaced by $-s$. Thus
+\begin{equation}\label{eq:T1}
+\sum_Nc_Nx^N=\frac{y^2}{(1-x)^2}-\frac{(1-t)\,x\,U\tilde U}{(1-x)^2}.
+\end{equation}
+
+\emph{Step 3: $U$ and $\tilde U$ through $y$ and $y'$.} The derivative formula (Appendix~\ref{app:hyper}, \ref{H:deriv})
+\[
+\frac{d}{dx}\F abcx=\frac{ab}c\F{a+1}{b+1}{c+1}x
+\]
+with $(a,b,c)=(-1-s,s,1)$ gives $v'=(-1-s)s\,U$, where $v=\F{-1-s}{s}{1}{x}$. The contiguous relation
+\begin{equation}\label{eq:contig}
+(c-a)\,\F{a-1}bcx=(c-a-bx)\,\F abcx+x(1-x)\,\frac{d}{dx}\F abcx
+\end{equation}
+with $(a,b,c)=(-s,s,1)$ gives $(1+s)\,v=(1+s-sx)\,y+x(1-x)\,y'$. Differentiating and reducing modulo \eqref{eq:ode}:
+\begin{align*}
+(1+s)\,v'&=(1+s-sx)y'-s\,y+(1-2x)y'+x(1-x)y''\\
+&=(1+s-sx)y'-s\,y+(1-2x)y'-(1-x)y'-t\,y\\
+&\hspace{10em}\bigl(\text{by }x(1-x)y''=-(1-x)y'-ty\bigr)\\
+&=\bigl[1+s-sx+1-2x-1+x\bigr]y'-(s+s^2)\,y=(1+s)(1-x)\,y'-s(1+s)\,y ,
+\end{align*}
+so $v'=(1-x)y'-s\,y$ and
+\[
+U=\frac{v'}{-s(1+s)}=\frac{s\,y-(1-x)\,y'}{s(1+s)}.
+\]
+Replacing $s$ by $-s$ throughout (which leaves $y$ unchanged) gives $\tilde v=\F{-1+s}{-s}1x=\frac{(1-s+sx)y+x(1-x)y'}{1-s}$, $\tilde v'=(1-x)y'+s\,y$, and $\tilde U=\dfrac{(1-x)\,y'+s\,y}{s(1-s)}$. Therefore
+\begin{equation}\label{eq:product}
+(1-t)\,U\tilde U=\frac{(1-s)(1+s)}{s^2(1+s)(1-s)}\bigl(s\,y-(1-x)y'\bigr)\bigl(s\,y+(1-x)y'\bigr)=y^2-\frac{(1-x)^2\,y'^2}{t}.
+\end{equation}
+
+\emph{Step 4.} Substituting \eqref{eq:product} into \eqref{eq:T1}:
+\[
+\sum_Nc_Nx^N=\frac{y^2}{(1-x)^2}-\frac{x}{(1-x)^2}\Bigl[y^2-\frac{(1-x)^2y'^2}{t}\Bigr]
+=\frac{(1-x)\,y^2}{(1-x)^2}+\frac{x\,y'^2}{t}=\frac{y^2}{1-x}+\frac{x\,y'^2}{t}.\qedhere
+\]
+\end{proof}
+
+\begin{lemma}[proved]\label{lem:A2}
+$A_2=(1-x)^{-3}A_{-1}$ with
+\[
+A_{-1}=\F{-1-s}{-1+s}{1}{x},\qquad (1-t)\,A_{-1}=\bigl(1-t+(1+t)x\bigr)\,y+2x(1-x)\,y'.
+\]
+\end{lemma}
+
+\begin{proof}
+Euler's transformation with $(a,b,c)=(2-s,2+s,1)$: $c-a-b=-3$, $(c-a,c-b)=(-1+s,-1-s)$, so $A_2=(1-x)^{-3}\F{-1+s}{-1-s}1x=(1-x)^{-3}A_{-1}$. For $A_{-1}$, apply \eqref{eq:contig} twice starting from $y=\F{-s}{s}1x$. First in the parameter $a$: with $(a,b,c)=(-s,s,1)$, $(1+s)v=(1+s-sx)y+x(1-x)y'$ where $v=\F{-1-s}s1x$, and $v'=(1-x)y'-sy$ (proof of Lemma~\ref{lem:twocol}). Then in the parameter $b$, using the symmetry of ${}_2F_1$ in $(a,b)$ to apply \eqref{eq:contig} with $(a,b,c)=(s,-1-s,1)$: $(1-s)\,\F{s-1}{-1-s}1x=\bigl(1-s-(-1-s)x\bigr)\,v+x(1-x)\,v'$, i.e.
+\[
+(1-s)A_{-1}=\bigl(1-s+(1+s)x\bigr)\frac{(1+s-sx)y+x(1-x)y'}{1+s}+x(1-x)\bigl((1-x)y'-sy\bigr).
+\]
+Multiply by $1+s$ and collect. Coefficient of $y$:
+\[
+(1-s+(1+s)x)(1+s-sx)-s(1+s)x(1-x)
+\]
+\[
+=(1-s^2)+\bigl[-s+s^2+(1+s)^2-s(1+s)\bigr]x+\bigl[-s(1+s)+s(1+s)\bigr]x^2,
+\]
+and $-s+s^2+1+2s+s^2-s-s^2=1+s^2$, so the coefficient is $(1-t)+(1+t)x$. Coefficient of $y'$: $x(1-x)\bigl[(1-s+(1+s)x)+(1+s)(1-x)\bigr]=x(1-x)\cdot2$. So $(1-s)(1+s)A_{-1}=(1-t+(1+t)x)y+2x(1-x)y'$.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:k2z}]
+Let $T(x)=\dfrac{y^2}{1-x}+\dfrac{x\,y'^2}{t}$. By Lemmas~\ref{lem:hooks} and \ref{lem:twocol}, $[x^N]$ of $(\vartheta+1)(\vartheta+1-t)T$ is $(N+1)(N+1-t)c_N$ and $[x^N]$ of $(1-t)yA_2$ is $(N+1)^2h_{N+1}$, so \eqref{eq:k2zline} for all $N$ is equivalent to
+\begin{equation}\label{eq:diffid}
+(\vartheta+1)(\vartheta+1-t)\,T=(1-t)\,y\,A_2 .
+\end{equation}
+
+\emph{Step 1: $(\vartheta+1)T=y^2/(1-x)^2$.} Differentiating,
+\[
+\vartheta T=x\,\frac{d}{dx}\Bigl[\frac{y^2}{1-x}+\frac{xy'^2}t\Bigr]=\frac{2x\,yy'}{1-x}+\frac{x\,y^2}{(1-x)^2}+\frac{x\,y'^2}{t}+\frac{2x^2\,y'y''}{t}.
+\]
+By \eqref{eq:ode}, $xy''=-y'-ty/(1-x)$, so $\dfrac{2x^2y'y''}{t}=\dfrac{2xy'}{t}\Bigl(-y'-\dfrac{ty}{1-x}\Bigr)=-\dfrac{2xy'^2}{t}-\dfrac{2xyy'}{1-x}$. The terms $\pm2xyy'/(1-x)$ cancel and the $y'^2$ terms combine to $-xy'^2/t$:
+\[
+\vartheta T=\frac{x\,y^2}{(1-x)^2}-\frac{x\,y'^2}{t},\qquad
+(\vartheta+1)T=\frac{x\,y^2}{(1-x)^2}+\frac{y^2}{1-x}=\frac{(x+1-x)\,y^2}{(1-x)^2}=\frac{y^2}{(1-x)^2}.
+\]
+
+\emph{Step 2.} $\displaystyle\vartheta\frac{y^2}{(1-x)^2}=\frac{2x\,yy'}{(1-x)^2}+\frac{2x\,y^2}{(1-x)^3}$, hence
+\[
+(\vartheta+1-t)\frac{y^2}{(1-x)^2}=\frac{2x(1-x)\,yy'+\bigl[2x+(1-t)(1-x)\bigr]y^2}{(1-x)^3}
+\]
+\[
+\phantom{(\vartheta+1-t)\frac{y^2}{(1-x)^2}}=\frac{\bigl(1-t+(1+t)x\bigr)y^2+2x(1-x)\,yy'}{(1-x)^3}.
+\]
+
+\emph{Step 3.} By Lemma~\ref{lem:A2}, $(1-t)\,y\,A_2=(1-x)^{-3}\,y\,\bigl[(1-t+(1+t)x)y+2x(1-x)y'\bigr]$, which is the expression in Step~2. So \eqref{eq:diffid} holds.
+\end{proof}
+
+\begin{corollary}[proved]\label{cor:Nc}
+$(N+1)\,c_N(t)=[x^N]\,\dfrac{y(x)^2}{(1-x)^2}=\sum_{i+j\le N}(N-i-j+1)\,y_iy_j$, where $y_n=\prod_{j<n}(j^2-t)/n!^2$. Equivalently,
+\[
+\sum_{\mu\vdash N,\ \mu_1\le2}w_t(\mu)=\frac{1}{N+1}\sum_{i+j\le N}(N+1-i-j)\,\frac{\prod_{l<i}(l^2-t)\prod_{l<j}(l^2-t)}{i!^2\,j!^2}.
+\]
+\end{corollary}
+
+\begin{proof}
+Step~1 of the preceding proof, and $[x^N]\,(1-x)^{-2}\sum_{i,j}y_iy_jx^{i+j}=\sum_{i+j\le N}(N-i-j+1)y_iy_j$. Checked coefficientwise for $N<8$.
+\end{proof}
+
+\begin{remark}
+Everything in the proof above is elementary once $y$ is fixed: two applications of the contiguous relation, one of the derivative formula, three of Euler's transformation, the Cauchy--Binet expansion behind Gessel's determinant, and the identity $(\vartheta+1)T=y^2/(1-x)^2$. The proof uses that shapes with at most two columns admit a $2\times2$ Toeplitz determinant; the fat hooks $H(k-1,k-1)$ for $k\ge3$ do not, so this route does not extend as it stands. The constraint ``at most two columns'' is not a product constraint on the parts, which is why the determinant, and not a plain Cauchy product, is needed.
+\end{remark}
+
+The second proof avoids Gessel's determinant and every fact about ${}_2F_1$ except the differential equation \eqref{eq:ode}. It multiplies \eqref{eq:k2zline} by $t$, which turns both sides into convolutions of the single sequence $y_n$, and then verifies one identity between power series. It was found in the course of the machine formalization of Theorem~\ref{thm:k2z} (Appendix~\ref{app:formal}) and is reproduced here in the notation of this section.
+
+\begin{proof}[Second proof of Theorem~\ref{thm:k2z}]
+Throughout, $y_n=\prod_{j<n}(j^2-t)/n!^2\in\mathbb Q[t]$ as in Corollary~\ref{cor:Nc}, $y=\sum_ny_nx^n$, and $\vartheta=x\,d/dx$. Put $P_0(n)=\prod_{j=0}^{n-1}(j^2-t)=n!^2y_n$ and $P_1(n)=\prod_{j=1}^{n}(j^2-t)$; since the factor $j=0$ of $P_0(n+1)$ is $-t$,
+\begin{equation}\label{eq:tP1}
+t\,P_1(n)=-P_0(n+1)=-(n+1)!^2\,y_{n+1}\qquad(n\ge0).
+\end{equation}
+
+\emph{Step 1: hooks.} By the computation in the proof of Lemma~\ref{lem:hooks}, for the hook $(a+1,1^b)$ of $N+1$ with $a+b=N$, $f_\lambda=\binom Nb$ and $\prod_\square((c-1)^2-t)=P_0(a)P_1(b+1)$, so $(N+1)!^2\,w_t(a+1,1^b)=\binom Nb^2P_0(a)P_1(b+1)$. Multiplying by $t$ and using \eqref{eq:tP1} with $n=b+1$ and $P_0(a)=a!^2y_a$,
+\[
+t\,(N+1)!^2\,w_t(a+1,1^b)=-\frac{N!^2}{a!^2\,b!^2}\,a!^2y_a\,(b+2)!^2y_{b+2}=-N!^2\,(b+1)^2(b+2)^2\,y_a\,y_{b+2}.
+\]
+Summing over $a+b=N$ and writing $j=b+2$, $i=a=N+2-j$ (the terms $j=0,1$ vanish because of the factor $j^2(j-1)^2$),
+\begin{equation}\label{eq:hookconv}
+t\,(N+1)^2\,h_{N+1}(t)=-\sum_{i+j=N+2}j^2(j-1)^2\,y_iy_j
+=-\sum_{i+j=N+1}(j+1)^2j^2\,y_iy_{j+1}.
+\end{equation}
+By the recursion $P_0(j+1)=(j^2-t)P_0(j)$, $(j+1)^2y_{j+1}=P_0(j+1)/j!^2=(j^2-t)\,y_j$, so
+\begin{equation}\label{eq:hookconv2}
+t\,(N+1)^2\,h_{N+1}(t)=-\sum_{i+j=N+1}j^2(j^2-t)\,y_iy_j .
+\end{equation}
+
+\emph{Step 2: two columns.} For $\mu=(2^j,1^{N-2j})$, $0\le2j\le N$, the number of standard tableaux is the ballot number $f_\mu=\binom Nj-\binom N{j-1}=\dfrac{N!\,(N+1-2j)}{j!\,(N+1-j)!}$; the boxes of the first column have contents $0,-1,\dots,-(N-j-1)$, so $(c-1)^2$ runs through $1^2,\dots,(N-j)^2$, and those of the second column have contents $1,0,\dots,-(j-2)$, so $(c-1)^2$ runs through $0^2,\dots,(j-1)^2$. Hence $N!^2\,w_t(\mu)=f_\mu^2\,P_1(N-j)\,P_0(j)$ and, by \eqref{eq:tP1} with $n=N-j$,
+\[
+t\,N!^2\,w_t(\mu)=-f_\mu^2\,(N+1-j)!^2\,j!^2\,y_{N+1-j}\,y_j=-N!^2\,(N+1-2j)^2\,y_j\,y_{N+1-j}.
+\]
+The summand $g(j)=(N+1-2j)^2y_jy_{N+1-j}$ is symmetric under $j\mapsto N+1-j$ and vanishes when $2j=N+1$, so $2\sum_{0\le2j\le N}g(j)=\sum_{j=0}^{N+1}g(j)=\sum_{i+j=N+1}(i-j)^2y_iy_j$, and since $(i-j)^2=(j^2-ij)+(i^2-ij)$ with the two halves exchanged by $i\leftrightarrow j$,
+\begin{equation}\label{eq:twocolconv}
+t\,c_N(t)=-\sum_{i+j=N+1}(j^2-ij)\,y_iy_j .
+\end{equation}
+
+\emph{Step 3: reduction to one power-series identity.} Multiply \eqref{eq:k2zline} by $t(N+1)$ and substitute \eqref{eq:hookconv2} and \eqref{eq:twocolconv}: with $n=N+1$, \eqref{eq:k2zline} times $t$ reads
+\begin{equation}\label{eq:conv}
+\sum_{i+j=n}j^2(j^2-t)\,y_iy_j=n(n-t)\sum_{i+j=n}(j^2-ij)\,y_iy_j\qquad(n\ge1).
+\end{equation}
+Both sides of \eqref{eq:k2zline} are polynomials in $t$, and $\mathbb Q[t]$ is an integral domain, so \eqref{eq:k2zline} is equivalent to \eqref{eq:conv}. Now $\sum_nx^n\sum_{i+j=n}j^2(j^2-t)y_iy_j=y\cdot(\vartheta^4-t\vartheta^2)y$, and $\sum_nx^n\,n(n-t)\sum_{i+j=n}(j^2-ij)y_iy_j=\vartheta(\vartheta-t)\bigl[y\,\vartheta^2y-(\vartheta y)^2\bigr]$, because $\sum_nx^n\sum_{i+j=n}ij\,y_iy_j=(\vartheta y)^2$. So \eqref{eq:conv} for all $n\ge1$ (and trivially for $n=0$) is the identity
+\begin{equation}\label{eq:thetaid}
+y\,(\vartheta^4-t\vartheta^2)\,y=\vartheta(\vartheta-t)\bigl[y\,\vartheta^2y-(\vartheta y)^2\bigr]
+\end{equation}
+in $\mathbb Q[t][[x]]$.
+
+\emph{Step 4: proof of \eqref{eq:thetaid}.} Since $\vartheta^2y=xy'+x^2y''$, the differential equation \eqref{eq:ode} reads
+\begin{equation}\label{eq:odetheta}
+(1-x)\,\vartheta^2y=-t\,x\,y .
+\end{equation}
+Write $b=\vartheta y$, $R=\vartheta^2y$ and $W=yR-b^2$. By the Leibniz rule for $\vartheta$, $\vartheta W=y\,\vartheta R+bR-2bR=y\,\vartheta R-bR$ and $\vartheta^2W=y\,\vartheta^2R+b\,\vartheta R-b\,\vartheta R-R^2=y\,\vartheta^2R-R^2$, so
+\[
+y(\vartheta^4-t\vartheta^2)y-\vartheta(\vartheta-t)W=\bigl(y\,\vartheta^2R-t\,yR\bigr)-\bigl(y\,\vartheta^2R-R^2\bigr)+t\bigl(y\,\vartheta R-bR\bigr)
+=R^2+t\bigl(y\,\vartheta R-bR-yR\bigr).
+\]
+Applying $\vartheta$ to \eqref{eq:odetheta} gives $-xR+(1-x)\vartheta R=-t\,x\,y-t\,x\,b$, i.e.\ $(1-x)\vartheta R=xR-txy-txb$. Multiplying the last display by $1-x$ and using \eqref{eq:odetheta} and this relation,
+\begin{align*}
+(1-x)\bigl[R^2+t(y\,\vartheta R-bR-yR)\bigr]
+&=R\cdot(-txy)+ty\,(xR-txy-txb)-tb\cdot(-txy)-ty\cdot(-txy)\\
+&=-txyR+txyR-t^2xy^2-t^2xyb+t^2xyb+t^2xy^2=0 .
+\end{align*}
+As $1-x$ is a unit of $\mathbb Q[t][[x]]$, the bracket vanishes, which is \eqref{eq:thetaid}.
+\end{proof}
+
+\begin{remark}
+The second proof uses only that $y$ satisfies \eqref{eq:ode} and that the weights of hooks and of two-column shapes are products of the $P_0$, $P_1$; the identity \eqref{eq:thetaid} is a consequence of the second-order equation alone. Comparing with Corollary~\ref{cor:Nc}: the first proof expresses $(N+1)c_N$ as a coefficient of $y^2/(1-x)^2$, the second expresses $t\,c_N$ as a coefficient of $(\vartheta y)^2-y\,\vartheta^2y$. Like the first proof, it depends on the two-column structure and does not extend to $k\ge3$. Its steps were checked by computer: \eqref{eq:hookconv2} and \eqref{eq:twocolconv} against the sums over partitions for $N\le8$, and \eqref{eq:thetaid} coefficientwise through $x^{12}$, both symbolically in $t$ (Appendix~\ref{app:prov}); the whole proof is also formalized (Appendix~\ref{app:formal}).
+\end{remark}
+
+\subsection{Rigidity of the family}
+
+\begin{computation}[verified by finite computation]\label{comp:dualrigid}
+On the line,
+\[
+s_\lambda(\rho_z)s_\lambda(\rho_{-z-2})=(-1)^{|\lambda|}s_\lambda(\rho_z)\,s_{\lambda'}(\rho_z\cup\{1,1\}),
+\]
+because $s_\lambda(\rho_{-w})=(-1)^{|\lambda|}s_{\lambda'}(\rho_w)$ and $\rho_{z+2}=\rho_z\cup\rho_2$ with $\rho_2$ the specialization to two variables equal to $1$. So the measure is a dual-Cauchy weight whose second alphabet is the first with two extra variables equal to $1$. The identity does not extend to such weights with general alphabets: for the measures proportional to $s_\lambda(x)s_{\lambda'}(y)$ with
+\[
+(x;y)=\bigl((a,b);(a,b,1,1)\bigr),\ \bigl((1,1);(1,1,a,a)\bigr),\ \bigl((1,1);(1,1,a,1/a)\bigr),\ \bigl((1,1,1);(1,1,1,a,b)\bigr),
+\]
+the identity for $k=2$ fails at $N=3$ and $N=4$ (exact Jacobi--Trudi computation), while it holds for $(x;y)=((1,1,1);(1,1,1,1,1))$. Only all-ones alphabets, i.e.\ uniform random subsets of $a\times(a+2)$ grids and their polynomial interpolation in $a$, survive.
+\end{computation}
+
+\section{The diagonal arrival probability}\label{sec:proved}
+
+Summing Proposition~\ref{prop:equiv}(c) over $k$ gives a statement about contents with a short direct proof from Bessel-function identities; it is the case $z=1$ of the generating-function form \eqref{eq:starstar}.
+
+\begin{theorem}[proved]\label{thm:content0}
+Let $c_N$ denote the content of the $N$-th box of Plancherel growth. Then, with $u=2\sqrt\theta$,
+\begin{equation}\label{eq:content0}
+\sum_{N\ge0}\frac{\theta^N}{N!}\,\Prob(c_{N+1}=0)=e^{\theta}\bigl(J_0(u)^2+J_1(u)^2\bigr),
+\end{equation}
+and, coefficientwise,
+\begin{equation}\label{eq:content0N}
+\Prob(c_{N+1}=0)=1-\Prob_N\bigl(\exists i:\lambda_i=i\bigr)-\Prob_N\bigl(\exists i:\lambda_i=i+1\bigr).
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+\emph{Step 1: the generator.} For any function $G$ on partitions with $\E_\theta|G|<\infty$,
+\[
+\frac{d}{d\theta}\E_\theta[G]=\frac{d}{d\theta}\sum_N\frac{e^{-\theta}\theta^N}{N!}\E_N[G]=\sum_N\frac{e^{-\theta}\theta^N}{N!}\bigl(\E_{N+1}[G]-\E_N[G]\bigr)
+\]
+\[
+\phantom{\frac{d}{d\theta}\E_\theta[G]}=\E_\theta\Bigl[\sum_{\square}p(\lambda\to\lambda+\square)\bigl(G(\lambda+\square)-G(\lambda)\bigr)\Bigr],
+\]
+by the Markov property of the growth process. With $G=N_0=\Durfee$, $G(\lambda+\square)-G(\lambda)$ is $1$ if $\square$ is the diagonal box and $0$ otherwise, so $\frac{d}{d\theta}\E_\theta[N_0]=\E_\theta[\mu_\lambda(\{0\})]$; and $\E_\theta[\mu_\lambda(\{0\})]=\sum_Ne^{-\theta}\theta^N\Prob(c_{N+1}=0)/N!$ because $\E_N[\mu_\lambda(\{0\})]$ is the probability that the $(N+1)$-st box is diagonal.
+
+\emph{Step 2: the left side.} $\E_\theta[N_0]=\sum_{x\ge0}\Prob_\theta(n_x=1)=\sum_{x\ge0}K(x,x)$, and by \eqref{eq:dK}, $\frac{d}{d\theta}\E_\theta[N_0]=\frac2u\sum_{x\ge0}J_xJ_{x+1}$.
+
+\emph{Step 3: a Bessel identity.} Put $S(u)=\sum_{x\ge0}J_x(u)J_{x+1}(u)$ and $R(u)=\frac u2\bigl(J_0(u)^2+J_1(u)^2\bigr)$. Using $J_x'=\frac12(J_{x-1}-J_{x+1})$ and $J_{-1}=-J_1$,
+\[
+S'=\tfrac12\sum_{x\ge0}\bigl[(J_{x-1}-J_{x+1})J_{x+1}+J_x(J_x-J_{x+2})\bigr]
+=\tfrac12\sum_{x\ge0}(J_{x-1}J_{x+1}-J_xJ_{x+2})+\tfrac12\sum_{x\ge0}(J_x^2-J_{x+1}^2).
+\]
+The second sum telescopes to $J_0^2$. In the first, $\sum_{x\ge0}J_{x-1}J_{x+1}=J_{-1}J_1+\sum_{x\ge1}J_{x-1}J_{x+1}=-J_1^2+\sum_{x\ge0}J_xJ_{x+2}$, so the first sum is $-J_1^2$. Hence $S'=\frac12(J_0^2-J_1^2)$. On the other side, with $J_0'=-J_1$, $J_1'=\frac12(J_0-J_2)$ and $J_0+J_2=\frac2uJ_1$,
+\[
+R'=\tfrac12(J_0^2+J_1^2)+u\bigl(J_0J_0'+J_1J_1'\bigr)=\tfrac12(J_0^2+J_1^2)+u\Bigl(-J_0J_1+\tfrac12J_1(J_0-J_2)\Bigr)
+\]
+\[
+\phantom{R'}=\tfrac12(J_0^2+J_1^2)-\tfrac u2J_1(J_0+J_2)=\tfrac12(J_0^2-J_1^2).
+\]
+As $S(0)=J_0(0)J_1(0)=0$ and $R(0)=0$, $S=R$. Combining with Steps~1--2, $\E_\theta[\mu_\lambda(\{0\})]=\frac2uS(u)=J_0^2+J_1^2$, and multiplying by $e^\theta$ gives \eqref{eq:content0}.
+
+\emph{Step 4: the right side.} $\Prob_\theta(n_x=1)=K(x,x)=\sum_{s\ge1}J_{x+s}^2$, so $K(0,0)+K(1,1)=\sum_{s\ge1}J_s^2+\sum_{s\ge2}J_s^2=2\sum_{s\ge1}J_s^2-J_1^2$. Neumann's identity $\sum_{s\in\Z}J_s^2=1$ and $J_{-s}^2=J_s^2$ give $2\sum_{s\ge1}J_s^2=1-J_0^2$, so $1-K(0,0)-K(1,1)=J_0^2+J_1^2$. Thus $\E_\theta[\mu_\lambda(\{0\})]=1-\E_\theta[n_0]-\E_\theta[n_1]$. The events $\{n_0=1\}$ and $\{n_1=1\}$ are $\{\exists i:\lambda_i-i=0\}$ and $\{\exists i:\lambda_i-i=1\}$; both sides of \eqref{eq:content0N} Poissonize to the two sides of the last identity, and two Poissonizations agree iff the coefficient sequences agree.
+\end{proof}
+
+\begin{computation}[verified by finite computation]\label{comp:content0}
+The sequence $(N+1)!\,\Prob(c_{N+1}=0)$ for $N+1=1,\dots,11$ is $1,0,0,4,30,168,840,3960,19782,150640,2089296$ (exact enumeration of pairs $(\lambda,\text{corner})$), and it agrees with the Taylor coefficients of the right side of \eqref{eq:content0} to $15$ digits. The relation $\Prob(c_{N+1}=0)=\Prob(c_N=\pm2)$, which is the sum over $k$ of Proposition~\ref{prop:equiv}(c), holds exactly for $N\le25$; the analogous relation $\Prob(c_{N+1}=x)=\frac12[\Prob(c_N=x-2)+\Prob(c_N=x+2)]$ fails for every $x\ne0$.
+\end{computation}
+
+\begin{remark}
+Theorem~\ref{thm:content0} is the value at $z=1$ of \eqref{eq:starstar}: there the left side is $\frac{d}{d\theta}\E_\theta[N_0]$ and the right side is $1-\E_\theta[n_0]-\E_\theta[n_1]$. It is the sum over $k$ of Theorem~\ref{thm:main}; the proof given here is independent of Section~\ref{sec:proof}. In representation-theoretic terms, $\Prob(c_{N+1}=0)$ is the multiplicity of the eigenvalue $0$ of the Jucys--Murphy element $X_{N+1}=\sum_{i\le N}(i\ N{+}1)$ in the regular representation of $S_{N+1}$, divided by $(N+1)!$, since $X_{N+1}$ acts on the Gelfand--Tsetlin basis by the content of the box containing $N+1$. In an answer to [Feldman 2011], P.~Alexandersson proposed the dual question: not the average value in a given box, but the average position of the box with a given content. Theorem~\ref{thm:content0} answers the content-$0$ case of the first-order version of that question (which box has content $0$ at time $N+1$), and Theorem~\ref{thm:main} locates the boxes of content $0$ relative to those of content $2$.
+\end{remark}
+
+\section{Proof of the shift identity}\label{sec:proof}
+
+The proof works in the Frobenius coordinates of Section~\ref{sec:frobenius} and with formal power series in $r=\sqrt\theta$. Lemma~\ref{lem:durfeedet} writes the generating functions of $\Durfee(\lambda)$ and of $N_2(\lambda)$ as determinants of one Hankel-type matrix $H=H(r)$, and Lemma~\ref{lem:Cprime} restates Theorem~\ref{thm:main} as an identity between four entries of the resolvent $\mathcal G=(1+zH^2)^{-1}$ and one further scalar. The rest of the section evaluates these five quantities in closed form (Propositions~\ref{prop:level0} and~\ref{prop:level1}) from three elementary properties of $H$ (Lemma~\ref{lem:Hids}): its $r$-derivative has rank one, and its commutators with the Euler operator $A$ and with a weighted shift $X$ have rank two. These produce finite-rank commutation relations for $\mathcal G$ (Lemma~\ref{lem:Gids}), a two-term recurrence for the vectors $\mathcal Gv$ and $\mathcal GHv$ (Lemma~\ref{lem:rec}), and a closed system of differential equations in $r$ for four scalars (Lemma~\ref{lem:odes}). Two algebraic first integrals of that system (Proposition~\ref{prop:level0}) are what make the closed forms possible. Every step is an identity between formal power series; no convergence, norm or analytic continuation enters. Section~\ref{sec:proofend} assembles the proof and records two corollaries.
+
+\begin{convention}\label{conv:formal}
+$K=\mathbb Q(z)$ is the field of rational functions in an indeterminate $z$, and $R=K[[r]]$ the ring of formal power series in $r$ over $K$; $R$ is an integral domain of characteristic $0$. For $f\in R$, $\operatorname{val}f\in\Z_{\ge0}\cup\{\infty\}$ is the order of $f$ in $r$, $f(0)\in K$ its constant term, and $f'=df/dr$ its formal derivative; $f$ is a unit of $R$ iff $f(0)\ne0$. A family $(f_i)_{i\in I}$ in $R$ is \emph{summable} if for each $m$ only finitely many $f_i$ have $\operatorname{val}f_i\le m$; its sum is then defined coefficientwise, sums of summable families may be rearranged and differentiated term by term, and if $(f_i)$, $(g_j)$ are summable so is $(f_ig_j)_{(i,j)}$. Sequences and matrices are indexed by $\Z_{\ge0}$. For $k\in\Z$,
+\[
+\mathcal V_k=\{f\in R^{\Z_{\ge0}}:\operatorname{val}f_a\ge a-k\text{ for all }a\},
+\]
+\[
+\mathcal B_k=\{M\in R^{\Z_{\ge0}\times\Z_{\ge0}}:\operatorname{val}M_{ab}\ge a+b-k\text{ for all }a,b\},
+\]
+$\mathcal V=\bigcup_k\mathcal V_k$, $\mathcal B=\bigcup_k\mathcal B_k$. The pairing $\langle f,g\rangle=\sum_af_ag_a$ of $f\in\mathcal V_k$, $g\in\mathcal V_l$ is summable ($\operatorname{val}f_ag_a\ge2a-k-l$), as are the products $Mf$ for $M\in\mathcal B_k$, $f\in\mathcal V_l$ (giving an element of $\mathcal V_{k+l}$) and $MN$ for $M\in\mathcal B_k$, $N\in\mathcal B_l$ (giving an element of $\mathcal B_{k+l}$); all these products are associative and satisfy the Leibniz rule for $'$. The basis vectors $e_a$ lie in $\mathcal V_a$, and $f\otimes g$, the matrix $(f_ag_b)_{a,b}$, lies in $\mathcal B_{k+l}$ for $f\in\mathcal V_k$, $g\in\mathcal V_l$, with $(f\otimes g)h=f\langle g,h\rangle$ and $\tr(f\otimes g):=\sum_af_ag_a=\langle g,f\rangle$. Three matrices with entries in $\mathbb Q$ act on $\mathcal V$ and on $\mathcal B$ (on either side) by finite sums, preserving $\mathcal V$ and $\mathcal B$ up to a shift of $k$ by at most $1$:
+\[
+(Af)_a=af_a,\qquad (Xf)_a=af_{a-1}\ (f_{-1}=0;\text{ so }(Xf)_0=0),\qquad (X^{\mathsf T}f)_a=(a+1)f_{a+1};
+\]
+$A$ is the Euler operator and $X$, $X^{\mathsf T}$ are weighted shifts, adjoint to each other for the pairing. The transpose $M^{\mathsf T}$ of a matrix is $(M_{ba})_{a,b}$, $(f\otimes g)^{\mathsf T}=g\otimes f$, and $\langle f,Mg\rangle=\langle M^{\mathsf T}f,g\rangle$ for $M\in\mathcal B$. Entries are written $M_{ab}$. The symbol $1$ denotes the identity matrix, which is not in $\mathcal B$; expressions such as $1+M$, $M\in\mathcal B$, act on $\mathcal V$ and multiply in the evident way. In this section $P$ and $Q$ denote the scalars of Definition~\ref{def:pq}, not tableaux.
+\end{convention}
+
+\begin{lemma}[Formal determinants; proved]\label{lem:fred}
+For $M\in\mathcal B$ put
+\[
+\det(1+M)=\sum_{S}\det\bigl(M_{ab}\bigr)_{a,b\in S}\in R,
+\]
+the sum over all finite subsets $S\subset\Z_{\ge0}$ (the term $S=\varnothing$ is $1$). Then:
+\begin{enumerate}[label=(\alph*)]
+\item the family is summable, and for every $m$ there is $n_0$ such that for $n\ge n_0$ the coefficients of $r^0,\dots,r^m$ in $\det(1+M)$ agree with those of the finite determinant $\det(1+M^{[n]})$, $M^{[n]}=(M_{ab})_{0\le a,b\le n}$;
+\item (Jacobi) if $M\in\mathcal B_{-1}$, then $N=\sum_{j\ge1}(-M)^j$ is summable in $\mathcal B_{-1}$, $1+N$ is a two-sided inverse of $1+M$, $\det(1+M)$ is a unit of $R$, and $\det(1+M)'=\det(1+M)\,\tr\bigl((1+N)\,M'\bigr)$, where $\tr$ of an element of $\mathcal B$ is the summable sum of its diagonal;
+\item (finite-rank perturbation) for $M\in\mathcal B_{-1}$, $N$ as in (b), and $f_1,\dots,f_s,g_1,\dots,g_s\in\mathcal V$,
+\[
+\det\Bigl(1+M+\sum_{i=1}^sf_i\otimes g_i\Bigr)=\det(1+M)\,\det\bigl(\delta_{ij}+\langle g_i,(1+N)f_j\rangle\bigr)_{i,j=1}^s .
+\]
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+(a) Let $M\in\mathcal B_k$. For a finite $S$ and a permutation $\pi$ of $S$, $\operatorname{val}\prod_{a\in S}M_{a\pi(a)}\ge\sum_{a\in S}(a+\pi(a)-k)=\sum_{a\in S}(2a-k)$. The terms $2a-k$ are negative only for the finitely many $a<k/2$, and each is $\ge-k$; so the sum exceeds $m$ as soon as $S$ contains an element $a>m+k^2$ or has more than $m+k^2+1$ elements. Hence only finitely many $S$ contribute to the coefficients of $r^0,\dots,r^m$, and all of them satisfy $S\subset[0,n]$ for $n\ge n_0:=m+k^2$, where the sum over such $S$ is the Laplace expansion of $\det(1+M^{[n]})$.
+
+(b) Since $M^j\in\mathcal B_{-j}$, every entry of $M^j$ has valuation $\ge j$, so $N$ is summable, and $(1+M)(1+N)=(1+N)(1+M)=1$ by rearranging the summable series. $\det(1+M)(0)=1$ since every $S\ne\varnothing$ contributes valuation $\ge2$. Fix $m$ and let $n\ge m+1$. Jacobi's formula for the finite matrix $1+M^{[n]}$ over the field of fractions of $R$ (Appendix~\ref{app:hyper}, \ref{H:jacobi}) reads $\det(1+M^{[n]})'=\det(1+M^{[n]})\tr\bigl((1+M^{[n]})^{-1}(M^{[n]})'\bigr)$, and $(1+M^{[n]})^{-1}=1+\sum_{j\ge1}(-M^{[n]})^j$ by the same summability. A product $M_{ac_1}M_{c_1c_2}\cdots M_{c_{j-1}b}$ in which some $c_i>n$ has valuation $\ge2c_i>m$, so the coefficients of $r^0,\dots,r^m$ in $(M^{[n]})^j$ and in $(M^j)^{[n]}$ agree; the terms with $j>m$ have valuation $>m$; and the same bound shows that the diagonal sum defining $\tr$ agrees with the finite trace modulo $r^{m+1}$. With (a) for $M$ and for $M'\in\mathcal B_{-1}$, both sides of the claimed identity agree modulo $r^{m+1}$ for every $m$.
+
+(c) The same reduction to $n$ large, where it is the matrix determinant lemma for finite matrices (\ref{H:jacobi}): $\det(1+M^{[n]}+FG^{\mathsf T})=\det(1+M^{[n]})\det\bigl(I_s+G^{\mathsf T}(1+M^{[n]})^{-1}F\bigr)$ with $F$, $G$ the $(n+1)\times s$ matrices with columns $f_i^{[n]}$, $g_i^{[n]}$; the pairings $\langle g_i,(1+N)f_j\rangle$ are summable and agree with their truncations modulo $r^{m+1}$ for $n$ large by the valuation bounds of Convention~\ref{conv:formal}.
+\end{proof}
+
+\subsection{The hook matrix}
+
+\begin{definition}\label{def:H}
+Let $H$ be the symmetric matrix and $v$ the vector
+\[
+H_{ab}=\frac{r^{a+b+1}}{a!\,b!\,(a+b+1)}=\theta^{(a+b+1)/2}F(a\mid b),\qquad v_a=\frac{r^a}{a!}\qquad(a,b\ge0),
+\]
+where $F(a\mid b)=1/(a!\,b!\,(a+b+1))$ is the value \eqref{eq:frobF} for the hook $(a\mid b)$; thus $H\in\mathcal B_{-1}$, $v\in\mathcal V_0$, $H^2\in\mathcal B_{-2}$. Let
+\[
+\mathcal G=1+\sum_{n\ge1}(-z)^nH^{2n},
+\]
+the sum being summable in $\mathcal B_{-2}$ since $H^{2n}\in\mathcal B_{-2n}$; then $(1+zH^2)\mathcal G=\mathcal G(1+zH^2)=1$, so $\mathcal G$ is the inverse of $1+zH^2$, $\mathcal G$ commutes with $H$, $\mathcal G^{\mathsf T}=\mathcal G$, and $\mathcal G-1=-zH\mathcal GH\in\mathcal B_{-2}$. Let $Z=\operatorname{diag}(1,1,z,z,z,\dots)$.
+\end{definition}
+
+\begin{lemma}[Durfee generating functions as determinants; proved]\label{lem:durfeedet}
+In $R$,
+\begin{equation}\label{eq:durfeedet}
+\sum_\lambda z^{\Durfee(\lambda)}F(\lambda)^2r^{2|\lambda|}=\det(1+zH^2),\qquad
+\sum_\lambda z^{N_2(\lambda)}F(\lambda)^2r^{2|\lambda|}=\det(1+ZH^2),
+\end{equation}
+where $N_2(\lambda)=\#\{i:\lambda_i-i\ge2\}$ as in Section~\ref{sec:setup}, the left sides are summable (finitely many $\lambda$ for each power of $r$), and the right sides are the determinants of Lemma~\ref{lem:fred}.
+\end{lemma}
+
+\begin{proof}
+Giambelli's formula $s_\lambda=\det\bigl(s_{(a_i\mid b_j)}\bigr)_{i,j=1}^d$ for $\lambda=(a_1,\dots,a_d\mid b_1,\dots,b_d)$ (Macdonald, I.3, Example~9) is an identity in the ring of symmetric functions, so it survives the exponential specialization $p_1\mapsto1$, $p_k\mapsto0$ ($k\ge2$), under which $s_\lambda\mapsto f_\lambda/|\lambda|!=F(\lambda)$:
+\[
+F(\lambda)=\det\bigl(F(a_i\mid b_j)\bigr)_{i,j=1}^d .
+\]
+Since $|\lambda|=\sum_i(a_i+b_i+1)=\sum_i(a_i+b_{\pi(i)}+1)$ for every permutation $\pi$, multiplying row $i$ by $r^{a_i+1/2}$ and column $j$ by $r^{b_j+1/2}$ gives $r^{|\lambda|}F(\lambda)=\det\bigl(H_{a_ib_j}\bigr)_{i,j}$. Hence
+\[
+\sum_\lambda z^{\Durfee(\lambda)}F(\lambda)^2r^{2|\lambda|}
+=\sum_{d\ge0}z^d\sum_{a_1>\cdots>a_d\ge0}\ \sum_{b_1>\cdots>b_d\ge0}\det\bigl(H_{a_ib_j}\bigr)\det\bigl(H_{a_ib_j}\bigr),
+\]
+all sums summable. For fixed $a=(a_1,\dots,a_d)$ the inner sum is, by the Cauchy--Binet formula (for the summable family of $d\times d$ minors of the matrix $(H_{a_ib})_{i,b}$) and the symmetry of $H$, the principal minor $\det\bigl((H^2)_{a_ia_j}\bigr)_{i,j}$; and $\sum_dz^d\sum_a\det\bigl((H^2)_{a_ia_j}\bigr)_{i,j}=\sum_S\det\bigl((zH^2)_{ab}\bigr)_{a,b\in S}$ is the sum defining $\det(1+zH^2)$. For the second identity, $z^{N_2(\lambda)}=\prod_{i\le d}z^{[a_i\ge2]}=\prod_{i\le d}Z_{a_ia_i}$, so the summand acquires the factor $\prod_iZ_{a_ia_i}$ and the principal minor becomes $\det\bigl((ZH^2)_{a_ia_j}\bigr)$.
+\end{proof}
+
+
+\begin{lemma}[Reformulation; proved]\label{lem:Cprime}
+Theorem~\ref{thm:main} (for all $k\ge2$) is equivalent to the identity in $R$
+\begin{equation}\label{eq:C}
+\frac{1}{2r}\,\frac{d}{dr}\det(1+zH^2)=z\,\det(1+ZH^2)
+\end{equation}
+(the left side lies in $R$ because $\det(1+zH^2)$ is a series in $r^2$).
+\end{lemma}
+
+\begin{proof}
+By Lemma~\ref{lem:durfeedet}, with $\theta=r^2$, the coefficient of $\theta^N$ in \eqref{eq:C} is $(N+1)\sum_{\lambda\vdash N+1}z^{\Durfee(\lambda)}F(\lambda)^2=z\sum_{\lambda\vdash N}z^{N_2(\lambda)}F(\lambda)^2$, an identity in $K=\mathbb Q(z)$ between two polynomials in $z$, hence an identity for every complex value of $z$; with $F(\lambda)=f_\lambda/|\lambda|!$ it is $\E_{N+1}[z^{\Durfee}]=z\,\E_N[z^{N_2}]$, and the coefficient of $z^k$ in the latter is $\Prob_{N+1}(\Durfee=k)=\Prob_N(N_2=k-1)$, which for all $k$ is Proposition~\ref{prop:equiv}(e) for all $k$ (recall $\Durfee=N_0$).
+\end{proof}
+
+\subsection{Identities for $H$ and the five quantities}
+
+\begin{lemma}[proved]\label{lem:Hids}
+The following hold.
+\begin{align}
+H'&=v\otimes v,\qquad v'=\tfrac1rAv;\tag{H1}\label{eq:H1}\\
+HA+(A+1)H&=r\,v\otimes v;\tag{H2}\label{eq:H2}\\
+X^{\mathsf T}H&=HX;\tag{H3}\label{eq:H3}\\
+XH-HX^{\mathsf T}&=[A,v\otimes v]=Av\otimes v-v\otimes Av;\tag{H4}\label{eq:H4}\\
+X^{\mathsf T}v&=rv,\qquad A^2v=rXv;\tag{H5}\label{eq:H5}\\
+[A,H^2]&=r\,(v\otimes Hv-Hv\otimes v).\tag{H6}\label{eq:H6}
+\end{align}
+In (H1), $\frac1rAv$ is the vector $(a\,r^{a-1}/a!)_a\in\mathcal V_1$.
+\end{lemma}
+
+\begin{proof}
+All are entrywise. (H1): $(r^{a+b+1}/(a!b!(a+b+1)))'=r^{a+b}/(a!b!)=v_av_b$, and $(r^a/a!)'=a\,r^{a-1}/a!$. (H2): $(HA)_{ab}+((A+1)H)_{ab}=(b+a+1)H_{ab}=r^{a+b+1}/(a!b!)=rv_av_b$. (H3): $(X^{\mathsf T}H)_{ab}=(a+1)H_{a+1,b}=r^{a+b+2}/(a!b!(a+b+2))=(b+1)H_{a,b+1}=(HX)_{ab}$. (H4): $(XH)_{ab}=aH_{a-1,b}=a\,r^{a+b}/((a-1)!\,b!\,(a+b))=a^2r^{a+b}/(a!b!(a+b))$ and $(HX^{\mathsf T})_{ab}=bH_{a,b-1}=b^2r^{a+b}/(a!b!(a+b))$, so the difference is $(a-b)r^{a+b}/(a!b!)=(a-b)v_av_b=(Av\otimes v-v\otimes Av)_{ab}$. (H5): $(X^{\mathsf T}v)_a=(a+1)v_{a+1}=r^{a+1}/a!=rv_a$, and $(A^2v)_a=a^2r^a/a!=r\cdot a\,r^{a-1}/(a-1)!=r(Xv)_a$. (H6): by (H2), $AH=rv\otimes v-HA-H$, so $AH^2=rv\otimes Hv-HAH-H^2$, and $H^2A=H(rv\otimes v-AH-H)=rHv\otimes v-HAH-H^2$; subtract.
+\end{proof}
+
+\begin{lemma}[The five quantities; proved]\label{lem:five}
+Put $\xi=1-z$, $Q=\langle v,\mathcal GHv\rangle$ and $D=\det(1+zH^2)$. Then $D(0)=1$, $Q\in rR$,
+\begin{equation}\label{eq:dlogdet}
+D'=2zQ\,D,\qquad
+\frac{\det(1+ZH^2)}{D}=\frac{(1-\xi\mathcal G_{00})(1-\xi\mathcal G_{11})-\xi^2\mathcal G_{01}^2}{z^2},
+\end{equation}
+and \eqref{eq:C} is equivalent to
+\begin{equation}\label{eq:Cprime}
+\frac{Q}{r}=\frac{(1-\xi\mathcal G_{00})(1-\xi\mathcal G_{11})-\xi^2\mathcal G_{01}^2}{z^2}.\tag{C$'$}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+$D(0)=1$ since every $S\ne\varnothing$ contributes valuation $\ge2$; so $D$ is a unit. $Q\in rR$ since $\operatorname{val}(\mathcal GHv)_a\ge a+1$. By (H1), $(H^2)'=v\otimes Hv+Hv\otimes v$, and Lemma~\ref{lem:fred}(b) with $M=zH^2$, $1+N=\mathcal G$ gives $D'=D\,\tr\bigl(\mathcal G\,z(v\otimes Hv+Hv\otimes v)\bigr)=zD\bigl(\langle Hv,\mathcal Gv\rangle+\langle v,\mathcal GHv\rangle\bigr)=2zQD$, using $\tr(\mathcal G(f\otimes g))=\langle g,\mathcal Gf\rangle$ and $\mathcal G^{\mathsf T}=\mathcal G$. Next, $ZH^2=zH^2-(z-1)P_{01}H^2$ with $P_{01}H^2=e_0\otimes H^2e_0+e_1\otimes H^2e_1$, so Lemma~\ref{lem:fred}(c) gives $\det(1+ZH^2)=D\,\det\bigl(\delta_{ab}-(z-1)\langle H^2e_a,\mathcal Ge_b\rangle\bigr)_{a,b\in\{0,1\}}=D\,\det\bigl(\delta_{ab}-(z-1)(H^2\mathcal G)_{ab}\bigr)$. Since $H^2\mathcal G=(1-\mathcal G)/z$, $\delta_{ab}-(z-1)(H^2\mathcal G)_{ab}=\bigl(\delta_{ab}-\xi\mathcal G_{ab}\bigr)/z$, which gives the second formula. Finally \eqref{eq:C} reads $(2r)^{-1}\cdot2zQD=z\det(1+ZH^2)$; divide by $zD$.
+\end{proof}
+
+\subsection{The resolvent}
+
+\begin{definition}\label{def:pq}
+With $\mathcal G$ as in Definition~\ref{def:H} put
+\[
+p=\mathcal Gv,\quad q=\mathcal GHv,\quad t=\mathcal GAv,\quad s=\mathcal GHAv,
+\]
+\[
+P=\langle v,p\rangle,\quad Q=\langle v,q\rangle,\quad P_1=\langle Av,p\rangle,\quad Q_1=\langle Av,q\rangle,
+\]
+and the abbreviations
+\[
+\sigma=P_1-zrPQ,\qquad \beta=r(1-zP^2),\qquad W=rP^2-Q,\qquad u=r-zQ,\qquad w=r-2zrP^2+zQ .
+\]
+Valuations: $p\in\mathcal V_0$ with $p_0(0)=1$; $q,s\in\mathcal V_{-1}$; $t\in\mathcal V_0$; $P(0)=1$, so $P$ is a unit of $R$; $Q\in rR$ with $Q=r+O(r^2)$; $P_1\in r^2R$ with $P_1=r^2+O(r^3)$; $Q_1\in r^2R$; hence $\sigma\in rR$, $W\in rR$, $\tau:=(P_1-r^2P)/r\in rR$, and $1-zP^2=(1-z)+O(r)$ is a unit of $R$ (as $1-z\ne0$ in $K$). These follow from $\mathcal G-1\in\mathcal B_{-2}$, $v_0=1$, $(Av)_a=0$ for $a=0$, and $\langle v,Hv\rangle=H_{00}+O(r^2)=r+O(r^2)$, $\langle Av,v\rangle=r^2+O(r^4)$.
+\end{definition}
+
+Note that $\mathcal G$ and $H$ commute, $\mathcal G^{\mathsf T}=\mathcal G$, and $H\mathcal GH=(1-\mathcal G)/z$; hence
+\begin{equation}\label{eq:Hpq}
+Hp=q,\qquad Hq=\frac{v-p}{z},\qquad Ht=s,\qquad Hs=\frac{Av-t}{z}.
+\end{equation}
+
+\begin{lemma}[Commutation relations for $\mathcal G$; proved]\label{lem:Gids}
+\begin{align}
+\mathcal G'&=-z\,(p\otimes q+q\otimes p);\tag{G1}\label{eq:G1}\\
+[A,\mathcal G]&=-zr\,(p\otimes q-q\otimes p);\tag{G2}\label{eq:G2}\\
+X^{\mathsf T}\mathcal GH-\mathcal GHX&=-z\,(s\otimes q-q\otimes s);\tag{G3}\label{eq:G3}\\
+X\mathcal GH-\mathcal GHX^{\mathsf T}&=t\otimes p-p\otimes t.\tag{G4}\label{eq:G4}
+\end{align}
+Moreover
+\begin{equation}\label{eq:ts}
+t=Ap+zr\,(Qp-Pq),\qquad s=-(A+1)q+r\,(zQq+Pp),
+\end{equation}
+and consequently
+\begin{equation}\label{eq:vts}
+\langle v,t\rangle=P_1,\qquad \langle v,s\rangle=-Q_1-Q+r(zQ^2+P^2).
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+For any operators, $\mathcal GM\mathcal G$ with $M=f\otimes g$ equals $\mathcal Gf\otimes\mathcal G^{\mathsf T}g=\mathcal Gf\otimes\mathcal Gg$. (G1): $\mathcal G'=-\mathcal G(1+zH^2)'\mathcal G=-z\mathcal G(v\otimes Hv+Hv\otimes v)\mathcal G$ by (H1). (G2): $[A,\mathcal G]=\mathcal G[1+zH^2,A]\mathcal G=-z\mathcal G[A,H^2]\mathcal G$, and (H6). (G3): $X^{\mathsf T}\mathcal GH-\mathcal GHX=\mathcal G\bigl[(1+zH^2)X^{\mathsf T}H-HX(1+zH^2)\bigr]\mathcal G$, and by (H3) the bracket is $z(H^2X^{\mathsf T}H-HXH^2)=zH(HX^{\mathsf T}-XH)H=-zH[A,v\otimes v]H=-z(HAv\otimes Hv-Hv\otimes HAv)$ by (H4). (G4): $X\mathcal GH-\mathcal GHX^{\mathsf T}=\mathcal G\bigl[(1+zH^2)XH-HX^{\mathsf T}(1+zH^2)\bigr]\mathcal G$; the bracket is $XH-HX^{\mathsf T}+z(H\cdot HXH-HX^{\mathsf T}H\cdot H)=[A,v\otimes v]+zH(HX-X^{\mathsf T}H)H=[A,v\otimes v]$ by (H4), (H3).
+
+For \eqref{eq:ts}: $t=\mathcal GAv=A\mathcal Gv-[A,\mathcal G]v=Ap+zr(p\langle q,v\rangle-q\langle p,v\rangle)$ by (G2). Then $s=Ht=HAp+zr(Qq-PHq)=HAp+zrQq-rP(v-p)$ by \eqref{eq:Hpq}, and by (H2) $HAp=rv\langle v,p\rangle-(A+1)Hp=rPv-(A+1)q$; the terms $rPv$ cancel. For \eqref{eq:vts}: $\langle v,t\rangle=\langle v,Ap\rangle+zr(QP-PQ)=\langle Av,p\rangle$, and $\langle v,s\rangle=-\langle Av,q\rangle-\langle v,q\rangle+r(zQ\langle v,q\rangle+P\langle v,p\rangle)$.
+\end{proof}
+
+\subsection{The recurrences}
+
+\begin{lemma}[proved]\label{lem:rec}
+With $\varepsilon:=z\bigl(2Q_1+Q-rzQ^2-rP^2\bigr)$,
+\begin{align}
+Xq&=P\,Ap-\sigma\,p+\beta\,q,\tag{Rq}\label{eq:Rq}\\
+Xp&=\frac1rA^2p-zP\,Aq+zW\,p-z\sigma\,q+\varepsilon\,v.\tag{Rp}\label{eq:Rp}
+\end{align}
+\end{lemma}
+
+\begin{proof}
+\eqref{eq:Rq}: apply (G4) to $v$, using $X^{\mathsf T}v=rv$ (H5), $\langle p,v\rangle=P$ and $\langle t,v\rangle=P_1$ \eqref{eq:vts}: $Xq-rq=Pt-P_1p$. Insert $t$ from \eqref{eq:ts}: $Xq=rq+P\,Ap+zrPQ\,p-zrP^2q-P_1p=P\,Ap+(zrPQ-P_1)p+r(1-zP^2)q$.
+
+\eqref{eq:Rp}: write $p=v-zH\mathcal GHv=v-zHq$, so $Xp=Xv-zXHq$. By (H4), $XHq=HX^{\mathsf T}q+Av\langle v,q\rangle-v\langle Av,q\rangle=HX^{\mathsf T}q+Q\,Av-Q_1v$. By (G3) applied to $v$, $X^{\mathsf T}q=X^{\mathsf T}\mathcal GHv=\mathcal GHXv-z(sQ-q\langle s,v\rangle)$. Hence, using \eqref{eq:Hpq} ($zH\mathcal GH=1-\mathcal G$, $Hs=(Av-t)/z$, $Hq=(v-p)/z$),
+\begin{align*}
+Xp&=Xv-zH\mathcal GHXv+z^2Q\,Hs-z^2\langle s,v\rangle Hq-zQ\,Av+zQ_1v\\
+&=\mathcal GXv+zQ(Av-t)-z\langle s,v\rangle(v-p)-zQ\,Av+zQ_1v\\
+&=\mathcal GXv-zQ\,t-z\langle s,v\rangle(v-p)+zQ_1v .
+\end{align*}
+By (H5), $\mathcal GXv=\frac1r\mathcal GA^2v$, and $\mathcal GA^2v=A^2\mathcal Gv-\bigl([A,\mathcal G]A+A[A,\mathcal G]\bigr)v$; with (G2), $[A,\mathcal G]Av=-zr(pQ_1-qP_1)$ and $A[A,\mathcal G]v=-zr(Q\,Ap-P\,Aq)$, so
+\[
+\mathcal GXv=\frac1rA^2p+z(Q_1p-P_1q)+z(Q\,Ap-P\,Aq).
+\]
+Substituting this and $t=Ap+zr(Qp-Pq)$:
+\[
+Xp=\frac1rA^2p-zP\,Aq+p\bigl(zQ_1-z^2rQ^2+z\langle s,v\rangle\bigr)+q\bigl(-zP_1+z^2rPQ\bigr)+v\,z\bigl(Q_1-\langle s,v\rangle\bigr).
+\]
+With $\langle s,v\rangle=-Q_1-Q+rzQ^2+rP^2$ from \eqref{eq:vts}, the coefficient of $p$ is $z(rP^2-Q)=zW$, that of $q$ is $-z\sigma$, and that of $v$ is $z(2Q_1+Q-rzQ^2-rP^2)=\varepsilon$.
+\end{proof}
+
+\subsection{Differential equations}
+
+\begin{lemma}[proved]\label{lem:odes}
+In $R$ (with $\frac1rAp$, $\frac1r(A+1)q$, $\frac1rP_1$, $\frac1rQ$ and $\frac1r\sigma$ all in $R$ or $\mathcal V$ by Definition~\ref{def:pq}):
+\begin{align}
+p'&=\tfrac1rAp-2zP\,q,\qquad q'=2P\,p-\tfrac1r(A+1)q,\qquad \mathcal G_{ab}'=-z\,(p_aq_b+q_ap_b);\label{eq:pqode}\\
+P'&=\tfrac2rP_1-2zPQ=\tfrac2r\sigma,\qquad Q'=2P^2-\tfrac1rQ,\qquad P_1'=2\beta P+2zQ(P+\sigma).\label{eq:scalode}
+\end{align}
+\end{lemma}
+
+\begin{proof}
+$p'=\mathcal G'v+\mathcal Gv'=-z(pQ+qP)+\frac1rt$ by (G1), (H1), and $t=Ap+zr(Qp-Pq)$ gives $p'=\frac1rAp-2zPq$. Next, $(H\mathcal G)'=H'\mathcal G+H\mathcal G'=v\otimes p-zH(p\otimes q+q\otimes p)=v\otimes p-zq\otimes q-(v-p)\otimes p=p\otimes p-zq\otimes q$ (using $H'\mathcal G=v\otimes\mathcal G^{\mathsf T}v$ and \eqref{eq:Hpq}), so $q'=(H\mathcal G)'v+H\mathcal Gv'=Pp-zQq+\frac1rs$, and \eqref{eq:ts} gives $q'=2Pp-\frac1r(A+1)q$. The formula for $\mathcal G_{ab}'$ is (G1).
+
+$P'=\langle v',p\rangle+\langle v,p'\rangle=\frac1r\langle Av,p\rangle+\frac1r\langle v,Ap\rangle-2zP\langle v,q\rangle=\frac2rP_1-2zPQ$, and $\frac2rP_1-2zPQ=\frac2r(P_1-zrPQ)=\frac2r\sigma$. $Q'=\frac1r\langle Av,q\rangle+2P\langle v,p\rangle-\frac1r\langle v,(A+1)q\rangle=2P^2-\frac1rQ$. For $P_1'=\frac1r\langle A^2v,p\rangle+\langle Av,\frac1rAp-2zPq\rangle=\frac2r\langle A^2v,p\rangle-2zPQ_1$ we need $\langle A^2v,p\rangle=r\langle Xv,p\rangle=r\langle v,X^{\mathsf T}p\rangle$ (H5). Now $X^{\mathsf T}p=X^{\mathsf T}(v-zHq)=rv-zHXq$ by (H5), (H3), and by \eqref{eq:Rq}, (H2), \eqref{eq:Hpq},
+\[
+HXq=P\,HAp-\sigma Hp+\beta Hq=P\bigl(rPv-(A+1)q\bigr)-\sigma q+\frac\beta z(v-p),
+\]
+so $X^{\mathsf T}p=(r-zrP^2-\beta)v+zP(A+1)q+z\sigma q+\beta p=zP(A+1)q+z\sigma q+\beta p$. Pairing with $v$: $\langle A^2v,p\rangle=r\bigl(zP(Q_1+Q)+z\sigma Q+\beta P\bigr)$, and $P_1'=2zP(Q_1+Q)+2z\sigma Q+2\beta P-2zPQ_1=2\beta P+2zQ(P+\sigma)$.
+\end{proof}
+
+\subsection{First integrals and the entries at level $0$}
+
+\begin{proposition}[proved]\label{prop:level0}
+In $R$:
+\begin{align}
+\sigma^2&=\beta W,\quad\text{i.e.}\quad (P_1-zrPQ)^2=r(1-zP^2)(rP^2-Q);\tag{I1}\label{eq:I1}\\
+2Q_1+Q&=r(zQ^2+P^2),\quad\text{i.e.}\quad\varepsilon=0;\tag{I2}\label{eq:I2}\\
+p_0^2&=\frac{1-zP^2}{1-z}=\frac{\beta}{r(1-z)},\qquad q_0=\frac{\sigma}{\beta}\,p_0;\tag{I3}\label{eq:I3}\\
+\mathcal G_{00}&=\frac{1-zP}{1-z}.\tag{I4}\label{eq:I4}
+\end{align}
+\end{proposition}
+
+\begin{proof}
+\emph{Level-$0$ components.} Since $(Xf)_0=(Af)_0=0$ for every $f$ and $v_0=1$, the $0$-th components of \eqref{eq:Rq} and \eqref{eq:Rp} read
+\begin{equation}\label{eq:RARB}
+-\sigma p_0+\beta q_0=0,\qquad zWp_0-z\sigma q_0+\varepsilon=0.
+\end{equation}
+
+\emph{(I1).} Differentiate the first relation in \eqref{eq:RARB} using Lemma~\ref{lem:odes}. From \eqref{eq:scalode},
+\begin{align*}
+\sigma'&=P_1'-zPQ-zr(P'Q+PQ')=2\beta P+2zQ(P+\sigma)-zPQ-2z\sigma Q-zrP\Bigl(2P^2-\frac Qr\Bigr)\\
+&=2\beta P+2zPQ-2zrP^3,
+\end{align*}
+i.e.\ $\sigma'=2P(r+zQ-2zrP^2)$, and $\beta'=1-zP^2-2zrPP'=1-zP^2-4zP\sigma$. With $p_0'=-2zPq_0$ and $q_0'=2Pp_0-q_0/r$ from \eqref{eq:pqode},
+\[
+(-\sigma p_0+\beta q_0)'=p_0\,(2P\beta-\sigma')+q_0\,(2zP\sigma+\beta'-\beta/r).
+\]
+Here $2P\beta-\sigma'=2rP-2zrP^3-2rP-2zPQ+4zrP^3=2zP(rP^2-Q)=2zPW$ and $2zP\sigma+\beta'-\beta/r=2zP\sigma+1-zP^2-4zP\sigma-(1-zP^2)=-2zP\sigma$. So the derivative of the first relation is $2zP\,(Wp_0-\sigma q_0)=0$; as $z\ne0$ and $P$ is a unit, $Wp_0=\sigma q_0$. Multiplying by $\beta$ and using $\beta q_0=\sigma p_0$: $\beta Wp_0=\sigma\beta q_0=\sigma^2p_0$, i.e.\ $(\beta W-\sigma^2)p_0=0$, and $p_0$ is a unit.
+
+\emph{(I2).} Multiply the second relation in \eqref{eq:RARB} by $\beta$: $z\beta Wp_0-z\sigma\beta q_0+\beta\varepsilon=z\sigma^2p_0-z\sigma^2p_0+\beta\varepsilon=\beta\varepsilon$ by (I1) and $\beta q_0=\sigma p_0$. So $\beta\varepsilon=0$, and $\varepsilon=0$ since $\beta\ne0$ and $R$ is a domain.
+
+\emph{(I3).} The first relation in \eqref{eq:RARB} is $\beta q_0=\sigma p_0$. Put $f=p_0^2$ and $g=1-zP^2$, a unit. Then $\beta f'=2p_0\beta p_0'=-4zPp_0\beta q_0=-4zP\sigma p_0^2=-4zP\sigma f$, and $\beta g'=-2zP\beta P'=-2zPr(1-zP^2)\cdot2\sigma/r=-4zP\sigma g$; so $\beta(f'g-fg')=0$, hence $(f/g)'=0$, hence $f/g$ is its constant term $p_0(0)^2/(1-zP(0)^2)=1/(1-z)$. This is the first formula in (I3); the second is the first relation in \eqref{eq:RARB} divided by $\beta$ in the field of fractions (and $q_0=\sigma p_0/\beta$ lies in $R$, since $\sigma/r\in R$ and $1-zP^2$ is a unit).
+
+\emph{(I4).} $\mathcal G_{00}'=-2zp_0q_0$, and $\beta p_0q_0=\sigma p_0^2=\sigma\beta/(r(1-z))$ by (I3), so $p_0q_0=\sigma/(r(1-z))$ and $\mathcal G_{00}'=-2z\sigma/(r(1-z))=-zP'/(1-z)$ (as $P'=2\sigma/r$). So $\mathcal G_{00}+zP/(1-z)$ has zero derivative and is its constant term $1+z/(1-z)=1/(1-z)$.
+\end{proof}
+
+\subsection{Level $1$ and the entries $\mathcal G_{01}$, $\mathcal G_{11}$}
+
+\begin{lemma}[proved]\label{lem:level1}
+\begin{equation}\label{eq:p1q1}
+p_1=\beta\,p_0+z(\sigma+P)\,q_0,\qquad q_1=(\sigma-P)\,p_0+\Bigl(\frac1r+zW\Bigr)q_0 .
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+The components of index $1$ of \eqref{eq:Rq}, \eqref{eq:Rp} (with $(Xf)_1=f_0$, $(Af)_1=f_1$, $v_1=r$, $\varepsilon=0$) are
+\[
+q_0=(P-\sigma)p_1+\beta q_1,\qquad p_0=\Bigl(\frac1r+zW\Bigr)p_1-z(\sigma+P)q_1 .
+\]
+The determinant of this linear system in $(p_1,q_1)$ is $-z(P-\sigma)(\sigma+P)-\beta(\frac1r+zW)=-z(P^2-\sigma^2)-(1-zP^2)-z\beta W=z\sigma^2-1-z\beta W=-1$ by (I1). Cramer's rule gives $p_1=-\bigl(-z(\sigma+P)q_0-\beta p_0\bigr)$ and $q_1=-\bigl((P-\sigma)p_0-(\frac1r+zW)q_0\bigr)$, which is \eqref{eq:p1q1}.
+\end{proof}
+
+\begin{proposition}[proved]\label{prop:level1}
+With $\tau=(P_1-r^2P)/r\in rR$, in $R$:
+\begin{equation}\label{eq:G01G11}
+\mathcal G_{01}=\frac{z\,\tau}{1-z},\qquad
+\mathcal G_{11}=\frac1{1-z}\Bigl[1-\frac zP\Bigl(\frac Qr+\tau^2\Bigr)\Bigr]
+=\frac{r^2P-z\bigl(rQ+(P_1-r^2P)^2\bigr)}{r^2P\,(1-z)} .
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+Both formulas are proved by showing that the two sides have the same derivative and the same constant term. By (I3) and the proof of (I4), $p_0^2=\beta/(r(1-z))$ and $p_0q_0=\sigma/(r(1-z))$; and $\beta q_0^2=\sigma p_0q_0=\sigma^2/(r(1-z))=\beta W/(r(1-z))$ by (I1), so $q_0^2=W/(r(1-z))$ ($W/r\in R$). Recall $u=r-zQ$, $w=r-2zrP^2+zQ$; note $\beta+zW=u$ and $\beta-zW=w$.
+
+\emph{Step 1: two products.} From \eqref{eq:p1q1},
+\begin{align*}
+(1-z)\,r\,(p_0q_1+q_0p_1)&=(\sigma-P)\beta+\Bigl(\frac1r+zW+\beta\Bigr)\sigma+z(\sigma+P)W
+=\sigma\Bigl(2u+\frac1r\Bigr)-Pw=:\Lambda,\\
+(1-z)\,r\,p_1q_1&=\beta^2(\sigma-P)+\sigma\Bigl(\frac\beta r+z\beta W+z(\sigma^2-P^2)\Bigr)+zW(\sigma+P)\Bigl(\frac1r+zW\Bigr)\\
+&=\sigma\Bigl(u^2+\frac ur-zP^2\Bigr)-P\Bigl(uw-\frac{zW}r\Bigr)=:\Theta,
+\end{align*}
+where in the second line $z\sigma\cdot\sigma^2=z\sigma\beta W$ was used, and then $\beta^2+2z\beta W+z^2W^2=u^2$, $\beta^2-z^2W^2=uw$.
+
+\emph{Step 2: $\mathcal G_{01}$.} By \eqref{eq:scalode}, $P_1'=2\beta P+2zQ(P+\sigma)$ and $P'=2\sigma/r$, so
+\[
+\tau'=\frac{P_1'}r-\frac{P_1}{r^2}-P-rP'
+=2P+\frac{2zQP}r-2zP^3+\frac{2zQ\sigma}r-\frac{\sigma+zrPQ}{r^2}-P-2\sigma
+\]
+\[
+\phantom{\tau'}=\frac Pr\,w-\frac\sigma r\Bigl(2u+\frac1r\Bigr)=-\frac\Lambda r .
+\]
+Hence $\bigl(z\tau/(1-z)\bigr)'=-z\Lambda/(r(1-z))=-z(p_0q_1+q_0p_1)=\mathcal G_{01}'$ by \eqref{eq:pqode}. Both sides have constant term $0$: $\mathcal G_{01}\in r^3R$ since $\mathcal G-1\in\mathcal B_{-2}$, and $\tau\in rR$ (Definition~\ref{def:pq}).
+
+\emph{Step 3: $\mathcal G_{11}$.} Let $\Phi$ denote the middle expression in \eqref{eq:G01G11}. Then $\Phi'=-\frac z{1-z}\frac{d}{dr}\Bigl[\frac1P\Bigl(\frac Qr+\tau^2\Bigr)\Bigr]$, and with $Q'=2P^2-Q/r$, $\tau'=-\Lambda/r$, $P'=2\sigma/r$,
+\[
+\frac{d}{dr}\Bigl[\frac1P\Bigl(\frac Qr+\tau^2\Bigr)\Bigr]=\frac{2}{rP^2}\,\Xi,\qquad
+\Xi:=P^3-\frac{PQ}r-P\tau\Lambda-\frac{\sigma Q}r-\sigma\tau^2 .
+\]
+Expanding $\Xi-P^2\Theta$ with $\tau=\sigma/r+zPQ-rP$ and the definitions of $\Lambda,\Theta$ gives the polynomial identity
+\[
+r^2\,(\Xi-P^2\Theta)=-(P+\sigma)\,(\sigma^2-\beta W),
+\]
+so $\Xi=P^2\Theta$ by (I1), $\Phi'=-2z\Theta/(r(1-z))=-2zp_1q_1=\mathcal G_{11}'$. Both sides have constant term $1$: $\mathcal G_{11}-1\in r^4R$; and $Q/r$, $\tau$, $P$ have constant terms $1$, $0$, $1$ (Definition~\ref{def:pq}), so $\frac1P(\frac Qr+\tau^2)$ has constant term $1$ and $\Phi$ has constant term $\frac1{1-z}(1-z)=1$. The right-hand form in \eqref{eq:G01G11} is $\Phi$ with $\tau$ inserted.
+\end{proof}
+
+\subsection{Conclusion}\label{sec:proofend}
+
+\begin{proof}[Proof of Theorem~\ref{thm:main}]
+By Lemmas~\ref{lem:Cprime} and~\ref{lem:five} it suffices to prove \eqref{eq:Cprime} in $R$. Insert (I4) and \eqref{eq:G01G11}: $1-\xi\mathcal G_{00}=1-(1-zP)=zP$, $1-\xi\mathcal G_{11}=\frac zP\bigl(\frac Qr+\tau^2\bigr)$, $\xi\mathcal G_{01}=z\tau$. Hence
+\[
+\frac{(1-\xi\mathcal G_{00})(1-\xi\mathcal G_{11})-\xi^2\mathcal G_{01}^2}{z^2}
+=\frac{zP\cdot\frac zP\bigl(\frac Qr+\tau^2\bigr)-z^2\tau^2}{z^2}=\frac Qr ,
+\]
+which is \eqref{eq:Cprime}.
+\end{proof}
+
+\begin{corollary}[proved]\label{cor:Fshift}
+$F(k,k)=F(k-1,k+1)+1$ for every $k\ge2$; in particular $F(1,3)=F(2,2)-1$, and the differences $F(k,k)-F(k-1,k+1)$, found equal to $1$ to nine decimals in Computation~\ref{comp:main}, are exactly $1$.
+\end{corollary}
+
+\begin{proof}
+By Theorem~\ref{thm:main}, $T(k,k)$ and $T(k-1,k+1)+1$ have the same distribution; both have finite expectation (Proposition~\ref{prop:FisET}), and the expectations are $F(k,k)$ and $F(k-1,k+1)+1$.
+\end{proof}
+
+\begin{corollary}[proved]\label{cor:durfeeode}
+Let $D=\sum_\lambda z^{\Durfee(\lambda)}F(\lambda)^2r^{2|\lambda|}\in R$ (a unit), $g'=D'/D$, and $m=(g''+g'/r)/(4z)$, where $g''=(D'/D)'$; all lie in $R$. Then
+\begin{equation}\label{eq:durfeeode}
+r\,(m')^2=16\,m\,(1-zm)\Bigl(rm-\frac{g'}{2z}\Bigr),
+\end{equation}
+a third-order differential equation for $\log D=\theta+\log\E_\theta[z^{\Durfee}]$, $\theta=r^2$. As an identity of formal power series in $r$ with coefficients in $\mathbb Q(z)$ it holds for the analytic function $\log(e^\theta\E_\theta[z^{\Durfee}])$ wherever the latter is analytic in $(r,z)$. Moreover $\langle v,\mathcal Gv\rangle=\E_\theta[z^{N_1}]/\E_\theta[z^{N_0}]$, as formal series in $r$.
+\end{corollary}
+
+\begin{proof}
+By \eqref{eq:dlogdet}, $g'=2zQ$; by \eqref{eq:scalode}, $Q'=2P^2-Q/r$, so $P^2=(Q'+Q/r)/2=m$; and $(P')^2=4\sigma^2/r^2=4\beta W/r^2=4(1-zP^2)(rP^2-Q)/r$ by (I1), while $(P')^2=(m')^2/(4m)$. Substituting $Q=g'/(2z)$ gives \eqref{eq:durfeeode}. For the last claim, $\E_\theta[z^{N_1}]=e^{-\theta}\det(1+Z_1H^2)$ with $Z_1=\operatorname{diag}(1,z,z,\dots)$ (the proof of Lemma~\ref{lem:durfeedet} with $[a_i\ge1]$ in place of $[a_i\ge2]$), and as in Lemma~\ref{lem:five} the ratio to $\E_\theta[z^{N_0}]$ is $1-(z-1)(H^2\mathcal G)_{00}=(1-\xi\mathcal G_{00})/z=P$ by (I4).
+\end{proof}
+
+
+\begin{remark}[The integral-operator picture]\label{rem:Tpicture}
+For real $r>0$ and complex $z$ with $|z|\,\|H(r)\|^2<1$ all series of this section converge absolutely, $H(r)$ is a trace-class operator on $\ell^2(\Z_{\ge0})$, and the formal identities become identities between analytic functions. In that setting, let $V^*:\ell^2\to L^2[0,r]$ be $e_a\mapsto x^a/a!$ and $V$ its adjoint, $(Vf)_a=\int_0^rf(x)x^a/a!\,dx$. Then $H=VV^*$, and $T:=V^*V$ is the integral operator on $L^2[0,r]$ with kernel $\sum_a(xy)^a/a!^2=I_0(2\sqrt{xy})$. Hence $\det(1+zH^2)=\det(1+zT^2)$, and since $\mathcal L_xI_0(2\sqrt{xy})=y\,I_0(2\sqrt{xy})$ for $\mathcal L=\partial_xx\partial_x$, integration by parts gives
+\[
+T^2(x,y)=\frac{\sqrt{rx}\,I_1(2\sqrt{rx})\,I_0(2\sqrt{ry})-I_0(2\sqrt{rx})\,\sqrt{ry}\,I_1(2\sqrt{ry})}{x-y},
+\]
+a modified Bessel kernel of order $0$ on $[0,r]$. Under $V^*$: $v\mapsto I_0(2\sqrt{rx})=T(x,r)$, $Av\mapsto x\partial_xI_0(2\sqrt{rx})$, $A\mapsto x\partial_x$, $X\mapsto$ multiplication by $x$, $X^{\mathsf T}\mapsto\mathcal L$, and \eqref{eq:H2}--\eqref{eq:H4} are the boundary terms of integrations by parts on $[0,r]$. The quantities $P$, $P_1$ are the boundary values at $x=r$ of $(1+zT^2)^{-1}I_0(2\sqrt{rx})$ and of its image under $x\partial_x$. The proof above is self-contained and does not use the theory of integrable operators; a Nystr\"om discretization of $T$ reproduces $\det(1+zH^2)$, $\det(1+ZH^2)$ and \eqref{eq:Cprime} to $15$ digits (Appendix~\ref{app:prov}).
+\end{remark}
+
+\begin{computation}[numerical check of the proof]\label{comp:proofcheck}
+Every identity in Lemmas~\ref{lem:five}--\ref{lem:level1} and Propositions~\ref{prop:level0}--\ref{prop:level1}, including \eqref{eq:Cprime} and the two ratios in \eqref{eq:dlogdet}, was evaluated at $(r,z)\in\{(1.1,0.7),(0.8,-0.5),(1.5,2),(0.4,-2),(1.3,0.999)\}$ with $H$ truncated to $50\times50$ in $40$-digit arithmetic; algebraic identities hold to $10^{-30}$ and the differential identities to $10^{-18}$ (central differences with step $10^{-10}$). The reductions $\Xi-P^2\Theta$, $\Theta-(1-z)rp_1q_1$ and the final substitution were also carried out symbolically (Appendix~\ref{app:prov}).
+\end{computation}
+
+\begin{remark}[The $z$-measures]\label{rem:giambelliz}
+The argument of Lemma~\ref{lem:durfeedet} applies to the specialization $\rho_z$ of Section~\ref{sec:zline}. By the hook-content formula, $s_{(a\mid b)}(\rho_z)=\prod_{m=0}^{a}(z+m)\prod_{m=1}^{b}(z-m)\cdot F(a\mid b)$, a factor depending on $a$ alone times a factor depending on $b$ alone times the Plancherel value; so Giambelli's formula for $s_\lambda(\rho_z)$ is Giambelli's formula for $F(\lambda)$ with row $i$ multiplied by $\prod_{m=0}^{a_i}(z+m)$ and column $j$ by $\prod_{m=1}^{b_j}(z-m)$, and the product of these factors over $i$ and $j$ is $\prod_{\square\in\lambda}(z+c(\square))$, because the diagonal hooks of $\lambda$ partition its boxes. Consequently, with $H_z$ the matrix with entries $r^{a+b+1}s_{(a\mid b)}(\rho_z)$ and $z'=-z-2$, $q=r^2$,
+\[
+\sum_\lambda\omega^{\Durfee(\lambda)}w_t(\lambda)\,q^{|\lambda|}=\det\bigl(1+\omega H_zH_{z'}^{\mathsf T}\bigr),\qquad
+\sum_\lambda\omega^{N_2(\lambda)}w_t(\lambda)\,q^{|\lambda|}=\det\bigl(1+\Omega H_zH_{z'}^{\mathsf T}\bigr),
+\]
+$\Omega=\operatorname{diag}(1,1,\omega,\omega,\dots)$, with $w_t$ as in Section~\ref{sec:zline}, and Conjecture~\ref{conj:zline} is equivalent to $\frac{d}{dq}\det(1+\omega H_zH_{z'}^{\mathsf T})=\omega\bigl(zz'+q\frac{d}{dq}\bigr)\det(1+\Omega H_zH_{z'}^{\mathsf T})$ (verified by finite computation for $N\le6$; the equivalence is the argument of Lemma~\ref{lem:Cprime} with the factor $Z_N(t)/Z_{N+1}(t)=(N+1)/(N+1-t)$ and $zz'=1-t$). See Section~\ref{sec:open}.
+\end{remark}
+
+\section{The discrete Bessel resolvent: an equivalent form}\label{sec:bessel}
+
+This section restates Theorem~\ref{thm:main} in the particle coordinates of Section~\ref{sec:setup}, as an identity for four entries of the resolvent of the discrete Bessel kernel (Theorem~\ref{thm:spade}), and records the exact relations satisfied by that resolvent.
+
+\subsection{The Bessel--Hankel involution}
+
+\begin{lemma}[proved]\label{lem:hankel}
+Let $B$ be the matrix $B_{xy}=J_{x+y}(u)$, $x,y\in\Z$. Then $B$ is symmetric and orthogonal, $B^2=1$, and
+\[
+K=B\,P_1\,B,\qquad P_s=\text{the coordinate projection onto }\ell^2[s,\infty).
+\]
+Let $(Tf)(x)=f(x+1)$, so that $(TAT^*)(x,y)=A(x+1,y+1)$ for a kernel $A$. Then $TB=BT^*$, and the unitary $\Omega=TB$ satisfies $\Omega P_0\Omega^*=K$, $\Omega K\Omega^*=P_0$, and $\Omega e_x=\varphi_{x+1}$, where $\varphi_s(y)=J_{y+s}$.
+\end{lemma}
+
+\begin{proof}
+Multiplying the generating functions $e^{(u/2)(\tau-1/\tau)}=\sum_nJ_n\tau^n$ and $e^{(u/2)(1/\tau-\tau)}=\sum_nJ_n\tau^{-n}$ (\ref{H:bessel}) yields
+\[
+1=\sum_{n,k}J_nJ_k\tau^{n-k},\qquad\text{i.e.}\qquad\sum_{n\in\Z}J_nJ_{n+m}=\delta_{m0},
+\]
+which says that the rows of the symmetric matrix $B$ are orthonormal: $B^2=1$. Next, $(BP_1B)(x,y)=\sum_{s\ge1}J_{x+s}J_{s+y}=K(x,y)$. The Hankel property $B(x+1,y)=B(x,y+1)$ is $TB=BT^*$. $BP_0B$ has kernel $\sum_{s\ge0}J_{x+s}J_{y+s}=K(x-1,y-1)$, and $T(\cdot)T^*$ shifts both arguments by $1$, so $\Omega P_0\Omega^*=TBP_0BT^*=K$. $\Omega K\Omega^*=TB(BP_1B)BT^*=TP_1T^*=P_0$, since $(TP_1T^*)(x,y)=P_1(x+1,y+1)=\mathbf 1[x+1\ge1]\delta_{xy}$. Finally $(Be_x)(y)=J_{y+x}=\varphi_x(y)$ and $(T\varphi_x)(y)=J_{x+y+1}=\varphi_{x+1}(y)$.
+\end{proof}
+
+Thus the pair of projections $(P_0,K)$ is unitarily equivalent to $(K,P_0)$: the compression of $K$ to $[0,\infty)$ and the compression of $P_0$ to the range of $K$ have the same matrix.
+
+\subsection{The array $a$ and the identity $(\spadesuit)$}
+
+\begin{definition}
+Fix $z$ and put $\xi=1-z$, $K_0=P_0KP_0$ regarded as an operator on $\ell^2[0,\infty)$, $R=(1-\xi K_0)^{-1}$ (which exists for $\xi$ outside a discrete set, since $K_0$ is trace class with spectrum in $[0,1]$), $j^{(i)}=P_0\varphi_i$ (the vector $x\mapsto J_{x+i}$, $x\ge0$, defined for every $i\in\Z$), and
+\[
+a_{ki}=\langle j^{(k)},R\,j^{(i)}\rangle\qquad(k,i\in\Z),
+\]
+a symmetric array of functions of $(\theta,\xi)$. Let $\tilde\rho=(1-\xi KP_0)^{-1}K$ on $\ell^2(\Z)$ and $\rho=RK_0$ on $\ell^2[0,\infty)$.
+\end{definition}
+
+\begin{lemma}[proved]\label{lem:selfdual}
+$a_{ki}=\tilde\rho(k-1,i-1)$ for all $k,i\in\Z$, and $\tilde\rho(x,y)=\rho(x,y)$ for $x,y\ge0$.
+\end{lemma}
+
+\begin{proof}
+Expanding in powers of $\xi$, $(1-\xi P_0KP_0)^{-1}P_0=\sum_n\xi^n(P_0KP_0)^nP_0=\sum_n\xi^nP_0(KP_0)^n=P_0(1-\xi KP_0)^{-1}$; the same computation gives $(1-\xi P_0K)^{-1}P_0=P_0(1-\xi KP_0)^{-1}$. Hence $a_{ki}=\langle\varphi_k,P_0(1-\xi KP_0)^{-1}\varphi_i\rangle$. By Lemma~\ref{lem:hankel},
+\[
+\tilde\rho(k-1,i-1)=\langle e_{k-1},\tilde\rho\,e_{i-1}\rangle=\langle\Omega e_{k-1},\Omega\tilde\rho\Omega^*\,\Omega e_{i-1}\rangle
+\]
+\[
+\phantom{\tilde\rho(k-1,i-1)}=\bigl\langle\varphi_k,(1-\xi P_0K)^{-1}P_0\,\varphi_i\bigr\rangle=\bigl\langle\varphi_k,P_0(1-\xi KP_0)^{-1}\varphi_i\bigr\rangle=a_{ki},
+\]
+where $\Omega\tilde\rho\Omega^*=(1-\xi\,\Omega K\Omega^*\,\Omega P_0\Omega^*)^{-1}\Omega K\Omega^*=(1-\xi P_0K)^{-1}P_0$. For the second claim, $P_0\tilde\rho P_0=P_0(1-\xi KP_0)^{-1}KP_0=(1-\xi P_0KP_0)^{-1}P_0KP_0=RK_0$ by the same push-through identity.
+\end{proof}
+
+\begin{lemma}[Tilted kernel; proved]\label{lem:tilted}
+Let $\tilde\Prob_\theta$ be the probability measure proportional to $z^{N_0(\lambda)}\Pl_\theta(\lambda)$ (for $z>0$). Then for every finitely supported $h-1$,
+\[
+\tilde\E_\theta\Bigl[\prod_{x\in X}h(x)\Bigr]=\det\bigl(1+(h-1)\tilde K\bigr),\qquad\tilde K(x,y)=\tilde\rho(x,y)\,g(y),\quad g=z\,\mathbf 1_{[0,\infty)}+\mathbf 1_{(-\infty,-1]},
+\]
+so $\tilde\Prob_\theta$ is determinantal with kernel $\tilde K$. In particular $\tilde\Prob_\theta(n_x=1)=z\,\tilde\rho(x,x)$ for $x\ge0$, and $\tilde\Prob_\theta(n_0=n_1=1)=z^2\bigl(\tilde\rho(0,0)\tilde\rho(1,1)-\tilde\rho(0,1)^2\bigr)$.
+\end{lemma}
+
+\begin{proof}
+By \eqref{eq:multfunc}, $\tilde\E[\prod h]=\det(1+(gh-1)K)/\det(1+(g-1)K)$. Write $1+(gh-1)K=(1+(g-1)K)+g(h-1)K$, so the ratio is $\det\bigl(1+(1+(g-1)K)^{-1}g(h-1)K\bigr)$, and by $\det(1+AB)=\det(1+BA)$ with $A=(1+(g-1)K)^{-1}g$ and $B=(h-1)K$ this is $\det\bigl(1+(h-1)K(1+(g-1)K)^{-1}g\bigr)$. With $g-1=-\xi P_0$, $K(1-\xi P_0K)^{-1}=(1-\xi KP_0)^{-1}K=\tilde\rho$, and multiplying by $g$ on the right multiplies the kernel's second argument by $g(y)$. The one- and two-point formulas are the general $\Prob(n_x=1)=\tilde K(x,x)$ and $\Prob(n_x=n_y=1)=\det(\tilde K(a,b))_{a,b\in\{x,y\}}$.
+\end{proof}
+
+\begin{theorem}[proved]\label{thm:spade}
+For all $\theta>0$ and all $z$,
+\begin{equation}\label{eq:spade}
+\frac{a_{01}}{\sqrt\theta}=1-z\,(a_{11}+a_{22})+(z^2-z)\,(a_{11}a_{22}-a_{12}^2).\tag{$\spadesuit$}
+\end{equation}
+In terms of the tilted measure: $\tilde\E_\theta[\mu_\lambda(\{0\})]=\tilde\rho(-1,0)/\sqrt\theta$, and \eqref{eq:spade} says that this equals $\tilde\Prob_\theta(n_0=n_1=0)-z^{-1}\tilde\Prob_\theta(n_0=n_1=1)$. Conversely, \eqref{eq:spade} for all $\theta,z$ implies Theorem~\ref{thm:main}.
+\end{theorem}
+
+\begin{proof}
+By Theorem~\ref{thm:main} and Proposition~\ref{prop:cleanform}, \eqref{eq:starstar} holds for all $\theta$ and $z$. The three steps below show that \eqref{eq:starstar} and \eqref{eq:spade} are equivalent, which proves both assertions.
+
+\emph{Step 1: the left side of \eqref{eq:starstar}.} Let $D_0=\E_\theta[z^{N_0}]=\det(1-\xi K_0)$ by \eqref{eq:Ds}. By the generator identity (Step~1 of the proof of Theorem~\ref{thm:content0}) applied to $G=z^{N_0}$, for which $G(\lambda+\square)-G(\lambda)=(z-1)z^{N_0(\lambda)}$ if $\square$ is the diagonal box and $0$ otherwise,
+\[
+\partial_\theta D_0=(z-1)\,\E_\theta\bigl[z^{N_0}\mu_\lambda(\{0\})\bigr].
+\]
+On the other hand, by Jacobi's formula $\partial\log\det M=\tr(M^{-1}\partial M)$ and \eqref{eq:dK},
+\[
+\partial_\theta\log D_0=\tr\bigl((1-\xi K_0)^{-1}(-\xi\,\partial_\theta K_0)\bigr)=-\frac{\xi}{u}\tr\Bigl(R\bigl(j^{(0)}\otimes j^{(1)}+j^{(1)}\otimes j^{(0)}\bigr)\Bigr)
+\]
+\[
+\phantom{\partial_\theta\log D_0}=-\frac{\xi}{u}\bigl(\langle j^{(1)},Rj^{(0)}\rangle+\langle j^{(0)},Rj^{(1)}\rangle\bigr)=-\frac{2\xi}{u}a_{01},
+\]
+using $\tr\bigl(R\,(f\otimes g)\bigr)=\langle g,Rf\rangle$. Since $u/2=\sqrt\theta$ and $z-1=-\xi$: $\E_\theta[z^{N_0}\mu_\lambda(\{0\})]=\partial_\theta D_0/(z-1)=D_0\,a_{01}/\sqrt\theta$.
+
+\emph{Step 2: the right side of \eqref{eq:starstar}.} Apply \eqref{eq:multfunc} with $g_{u_0,u_1}=u_0$ at $x=0$, $u_1$ at $x=1$, $z$ on $[2,\infty)$ and $1$ on $(-\infty,-1]$. Then $g_{u_0,u_1}-1=-\xi P_0+\sum_{x\in\{0,1\}}(u_x-z)E_x$ with $E_x=e_x\otimes e_x$, and
+\[
+1+(g_{u_0,u_1}-1)K=(1-\xi P_0K)\Bigl(1+\sum_{x\in\{0,1\}}(u_x-z)\,(1-\xi P_0K)^{-1}E_xK\Bigr).
+\]
+The first factor has determinant $D_0$ by \eqref{eq:Ds}. The operator $(1-\xi P_0K)^{-1}E_xK$ equals $w_x\otimes\kappa_x$ with $w_x=(1-\xi P_0K)^{-1}e_x$ and $\kappa_x=Ke_x$ (indeed $E_xKh=e_x\langle e_x,Kh\rangle=e_x\langle Ke_x,h\rangle$, $K$ being symmetric). For finitely many rank-one operators, $\det\bigl(1+\sum_x\alpha_xw_x\otimes\kappa_x\bigr)=\det\bigl(\delta_{xy}+\alpha_y\langle\kappa_x,w_y\rangle\bigr)_{x,y}$, and
+\[
+\langle\kappa_x,w_y\rangle=\langle Ke_x,(1-\xi P_0K)^{-1}e_y\rangle=\bigl(K(1-\xi P_0K)^{-1}\bigr)(x,y)=\tilde\rho(x,y)=\rho(x,y)\quad(x,y\in\{0,1\}).
+\]
+Hence, with $N_2=\bigl(\rho(x,y)\bigr)_{x,y\in\{0,1\}}$,
+\[
+\E_\theta\bigl[z^{N_2}u_0^{n_0}u_1^{n_1}\bigr]=D_0\,\det\bigl(I_2+N_2\operatorname{diag}(u_0-z,u_1-z)\bigr)
+\]
+\[
+\phantom{\E_\theta\bigl[z^{N_2}u_0^{n_0}u_1^{n_1}\bigr]}=D_0\Bigl[1+\sum_x(u_x-z)\rho(x,x)+(u_0-z)(u_1-z)\det N_2\Bigr].
+\]
+The event $\{n_0=n_1=0\}$ corresponds to $u_0=u_1=0$, on which $z^{N_0}=z^{N_2}$: $\E[z^{N_0}(1-n_0)(1-n_1)]=D_0\det(I-zN_2)$. The coefficient of $u_0u_1$ is $\E[z^{N_2}n_0n_1]$, and on $\{n_0=n_1=1\}$, $z^{N_0}=z^2z^{N_2}$: $\E[z^{N_0}n_0n_1]=z^2D_0\det N_2$. So the right side of \eqref{eq:starstar} is $D_0[\det(I-zN_2)-z\det N_2]=D_0[1-z\tr N_2+(z^2-z)\det N_2]$.
+
+\emph{Step 3.} Dividing by $D_0$ and using Lemma~\ref{lem:selfdual} to write $N_2=\begin{pmatrix}a_{11}&a_{12}\\a_{12}&a_{22}\end{pmatrix}$ and $a_{01}=\tilde\rho(-1,0)$ gives \eqref{eq:spade}. The probabilistic reading is Lemma~\ref{lem:tilted}: $\tilde\Prob(n_0=n_1=0)=\det(I-zN_2)$ and $\tilde\Prob(n_0=n_1=1)=z^2\det N_2$, while $\tilde\E[\mu_\lambda(\{0\})]=\E[z^{N_0}\mu_\lambda(\{0\})]/D_0=a_{01}/\sqrt\theta$.
+\end{proof}
+
+\begin{computation}[numerical]
+At $(\theta,z)=(7.3,0.6)$ and $(5.7,0.63)$ the two sides of \eqref{eq:spade} agree to $15$ digits; the identifications $\tilde\rho(-1,0)=a_{01}$, $\tilde\rho(0,0)=a_{11}$, $\tilde\rho(1,1)=a_{22}$, $\tilde\rho(-1,-1)=a_{00}$ hold to $12$ digits; and \eqref{eq:starstar} holds symbolically in $z$ for $N<14$ (exact enumeration with Kerov's transition probabilities).
+\end{computation}
+
+\subsection{Exact relations for the array}
+
+\begin{proposition}[proved]\label{prop:reclax}
+For all $k,i\in\Z$,
+\begin{align}
+a_{k,i+1}+a_{k,i-1}&=a_{k-1,i}+a_{k+1,i}+\frac{2(i-k)}{u}\,a_{ki}-\xi\bigl(a_{k0}a_{1i}-a_{k1}a_{0i}\bigr),\tag{Rec}\label{eq:rec}\\
+\partial_\theta a_{ki}&=\frac1u\Bigl[a_{k-1,i}-a_{k+1,i}+a_{k,i-1}-a_{k,i+1}+\xi\bigl(a_{k0}a_{1i}+a_{k1}a_{0i}\bigr)\Bigr],\tag{Lax}\label{eq:lax}\\
+\partial_\xi a_{ki}&=\sum_{s\ge1}a_{ks}a_{si}.\tag{Ric}\label{eq:ric}
+\end{align}
+\end{proposition}
+
+\begin{proof}
+Let $X$ be multiplication by $x$ on $\ell^2[0,\infty)$; $F_i=Rj^{(i)}$; and recall $(f\otimes g)h=f\langle g,h\rangle$.
+
+\emph{(i) The commutator $[X,K_0]$.} $[X,K_0](x,y)=(x-y)K(x,y)=\sqrt\theta\,(J_xJ_{y+1}-J_{x+1}J_y)$ for $x,y\ge0$, by Lemma~\ref{lem:Kforms} (for $x=y$ both sides vanish). So $[X,K_0]=\sqrt\theta\,\bigl(j^{(0)}\otimes j^{(1)}-j^{(1)}\otimes j^{(0)}\bigr)$.
+
+\emph{(ii) The commutator $[X,R]$.} From $R(1-\xi K_0)=1$: $[X,R](1-\xi K_0)+R[X,1-\xi K_0]=0$, so $[X,R]=\xi R[X,K_0]R=\xi\sqrt\theta\bigl(F_0\otimes F_1-F_1\otimes F_0\bigr)$, using $R(f\otimes g)R=(Rf)\otimes(R^{\mathsf T}g)$ and $R^{\mathsf T}=R$.
+
+\emph{(iii) The recurrence for the vectors.} Since $(x+i)J_{x+i}=\frac u2(J_{x+i-1}+J_{x+i+1})$,
+\[
+X\,j^{(i)}=\frac u2\bigl(j^{(i-1)}+j^{(i+1)}\bigr)-i\,j^{(i)}\qquad(i\in\Z).
+\]
+
+\emph{(iv) Proof of \eqref{eq:rec}.} Compute $\langle j^{(k)},RXj^{(i)}\rangle$ in two ways. Using (iii) inside: $\langle j^{(k)},RXj^{(i)}\rangle=\frac u2(a_{k,i-1}+a_{k,i+1})-i\,a_{ki}$. Using $RX=XR-[X,R]$ and (ii): $\langle j^{(k)},XRj^{(i)}\rangle=\langle Xj^{(k)},F_i\rangle=\frac u2(a_{k-1,i}+a_{k+1,i})-k\,a_{ki}$, and $\langle j^{(k)},[X,R]j^{(i)}\rangle=\xi\sqrt\theta\bigl(\langle j^{(k)},F_0\rangle\langle F_1,j^{(i)}\rangle-\langle j^{(k)},F_1\rangle\langle F_0,j^{(i)}\rangle\bigr)=\xi\sqrt\theta\,(a_{k0}a_{1i}-a_{k1}a_{0i})$. Equating the two computations and dividing by $u/2=\sqrt\theta$ gives \eqref{eq:rec}.
+
+\emph{(v) Proof of \eqref{eq:lax}.} From $\frac{d}{d\theta}J_n=(J_{n-1}-J_{n+1})/u$, $\partial_\theta j^{(i)}=(j^{(i-1)}-j^{(i+1)})/u$. From $\partial_\theta R=R\,\partial_\theta(\xi K_0)\,R$ and \eqref{eq:dK}, $\partial_\theta R=\frac{\xi}{u}\bigl(F_0\otimes F_1+F_1\otimes F_0\bigr)$. The product rule gives
+\[
+\partial_\theta a_{ki}=\langle\partial_\theta j^{(k)},F_i\rangle+\langle j^{(k)},(\partial_\theta R)j^{(i)}\rangle+\langle F_k,\partial_\theta j^{(i)}\rangle
+\]
+\[
+\phantom{\partial_\theta a_{ki}}=\frac1u\bigl[a_{k-1,i}-a_{k+1,i}\bigr]+\frac{\xi}{u}\bigl[a_{k0}a_{1i}+a_{k1}a_{0i}\bigr]+\frac1u\bigl[a_{k,i-1}-a_{k,i+1}\bigr].
+\]
+
+\emph{(vi) Proof of \eqref{eq:ric}.} $\partial_\xi R=RK_0R$, and by \eqref{eq:Kdef}, $K_0=\sum_{s\ge1}j^{(s)}\otimes j^{(s)}$ on $[0,\infty)$; so $\partial_\xi a_{ki}=\sum_{s\ge1}\langle j^{(k)},Rj^{(s)}\rangle\langle j^{(s)},Rj^{(i)}\rangle$.
+
+All three were checked numerically ($10^{-16}$ for \eqref{eq:rec}, $10^{-11}$ for \eqref{eq:lax} by finite differences).
+\end{proof}
+
+\subsection{A global constraint}
+
+Equation \eqref{eq:rec} with $i=k+1$ reads, after relabelling,
+\[
+a_{kk}-a_{k-1,k-1}=a_{k-1,k+1}-a_{k-2,k}-\frac2u\,a_{k-1,k}+\xi\bigl(a_{k-1,0}a_{1k}-a_{k-1,1}a_{0k}\bigr),
+\]
+so it expresses differences of consecutive diagonal entries through off-diagonal ones and determines the diagonal only up to an additive constant. That constant is fixed by the boundary conditions $a_{kk}=\langle j^{(k)},Rj^{(k)}\rangle\to0$ as $k\to+\infty$ (since $\|j^{(k)}\|\to0$) and $a_{kk}=\tilde\rho(k-1,k-1)\to1$ as $k\to-\infty$ (far to the left all sites are occupied). Summing the displayed relation over $k\in\Z$, the terms $a_{k-1,k+1}-a_{k-2,k}$ telescope to $0$ (both limits vanish), and one obtains the global constraint
+\begin{equation}\label{eq:global}
+\frac2u\sum_{k\in\Z}a_{k-1,k}-\xi\sum_{k\in\Z}\bigl(a_{k-1,0}a_{1k}-a_{k-1,1}a_{0k}\bigr)=1 .
+\end{equation}
+At $\xi=0$, $a_{k-1,k}=K(k-2,k-1)$ and the second sum is absent, so \eqref{eq:global} reads $\frac2u\sum_xK(x,x+1)=1$. Indeed $K(x,x+1)=\sum_{n\ge x+1}J_nJ_{n+1}=-\sum_{n\le x}J_nJ_{n+1}$ (by $\sum_{n\in\Z}J_nJ_{n+1}=0$), so $\sum_xK(x,x+1)=\sum_{n\in\Z}nJ_nJ_{n+1}=\frac u2\sum_n(J_{n-1}+J_{n+1})J_{n+1}=\frac u2(0+1)=\frac u2$: Neumann's identities again, i.e.\ the $z=1$ slice proved in Theorem~\ref{thm:content0}. Relations \eqref{eq:rec}--\eqref{eq:ric} determine the array only together with such boundary conditions; the proof of Theorem~\ref{thm:main} in Section~\ref{sec:proof} uses instead the Frobenius basis, in which the $r$-flow closes on four scalars (Lemma~\ref{lem:odes}) and the boundary at $r=0$ supplies the constants of integration.
+
+\section{Fock-space formulation}\label{sec:fock}
+
+\subsection{Operators}
+
+\begin{definition}
+Let $\mathcal F$ be the fermionic Fock space (semi-infinite wedge) with creation and annihilation operators $\psi^*_x,\psi_x$, $x\in\Z$, satisfying $\psi_x\psi^*_y+\psi^*_y\psi_x=\delta_{xy}$ and all other anticommutators zero. A configuration $X\subset\Z$ containing all sufficiently negative integers and finitely many nonnegative ones corresponds to the basis vector $\ket X=\psi^*_{x_1}\wedge\psi^*_{x_2}\wedge\cdots$ with $x_1>x_2>\cdots$ the elements of $X$; $\psi^*_a$ acts by wedging from the left, which for $a\notin X$ gives $(-1)^{\#\{x\in X:x>a\}}\ket{X\cup a}$, and $\psi_a$ removes $a$ with the same sign. The charge of $X$ is $\#(X\cap[0,\infty))-\#((-\infty,-1]\setminus X)$. A partition $\lambda$ corresponds to the charge-$0$ state $\ket\lambda=\ket{X(\lambda)}$; the charge-$q$ sector $\mathcal F_q$ has vacuum $\ket\varnothing^{(q)}$ with particles at $x\le q-1$, and $\ket\nu^{(q)}$ has particles at $\{\nu_i-i+q\}$. For $z\in\C$ put
+\[
+E_z=\sum_{x\in\Z}(z+x)\,\psi^*_x\psi_{x-1},\qquad E_z^*=\sum_{x\in\Z}(z+x)\,\psi^*_{x-1}\psi_x .
+\]
+\end{definition}
+
+The operator $\psi^*_x\psi_{x-1}$ moves a particle from $x-1$ to $x$ when $x-1\in X$, $x\notin X$, and does so without sign: the annihilation and creation signs are both $(-1)^{\#\{y\in X:y>x\}}$. Moving the particle $\lambda_i-i$ one step right adds a box to row $i$ whose content is $\lambda_i+1-i=x$, the new position. Hence
+\begin{equation}\label{eq:EzN}
+E_z^N\ket\varnothing=\sum_{\lambda\vdash N}\Bigl(\sum_{\text{paths }\varnothing\to\lambda}\ \prod_{\text{boxes}}(z+c)\Bigr)\ket\lambda=\sum_{\lambda\vdash N}\prod_{\square\in\lambda}\bigl(z+c(\square)\bigr)\,f_\lambda\,\ket\lambda ,
+\end{equation}
+since every path (standard tableau) contributes the same product of contents, and
+\[
+M^{(N)}_{z,z'}(\lambda)=\frac{\langle E_{z'}^N\ket\varnothing,\ket\lambda\rangle\langle\ket\lambda,E_z^N\ket\varnothing\rangle}{N!^2\,Z_N}
+\]
+with the bilinear pairing in which the $\ket X$ are orthonormal. In the charge-$2$ sector positions are contents shifted by $2$, so $E_z^N\ket\varnothing^{(2)}=\sum_{\nu\vdash N}\prod_\nu(z+2+c)\,f_\nu\ket\nu^{(2)}$ (verified for $N\le4$ by direct application of the operators with the signs above). The lowest-weight relation $E_{z'}^*E_z^{N+1}\ket\varnothing=(N+1)(N+zz')E_z^N\ket\varnothing$ follows from \eqref{eq:EzN} and Kerov's sum rule $\sum_{\lambda\gtrdot\mu}(z+c)(z'+c)f_\lambda/f_\mu=(N+1)(zz'+N)$: applying $E_{z'}^*$ to $\prod_\lambda(z+c)f_\lambda\ket\lambda$ removes a corner of content $c$ with weight $z'+c$, and $\sum_{\lambda\gtrdot\mu}\prod_\lambda(z+c)f_\lambda\bigl(z'+c(\lambda/\mu)\bigr)=\prod_\mu(z+c)f_\mu\sum_{\lambda\gtrdot\mu}(z+c)(z'+c)f_\lambda/f_\mu$.
+
+\subsection{The involution behind the line}
+
+\begin{proposition}[proved]\label{prop:involution}
+Let $\mathcal R$ be the involutive automorphism of the Clifford algebra with $\mathcal R(\psi_x)=\psi^*_{1-x}$, $\mathcal R(\psi^*_x)=\psi_{1-x}$ (particle--hole conjugation composed with the reflection $x\mapsto1-x$; it preserves the anticommutation relations). Then
+\[
+\mathcal R(E_z)=E_{-z-2},\qquad\mathcal R(E_z^*)=E_{-z-2}^* .
+\]
+$\mathcal R$ maps $\mathcal F_0$ to $\mathcal F_2$, sends $\ket\varnothing$ to $\ket\varnothing^{(2)}=\psi^*_1\psi^*_0\ket\varnothing$, and sends $\ket\lambda$ to $\pm\ket{\lambda'}^{(2)}$.
+\end{proposition}
+
+\begin{proof}
+$\mathcal R(E_z)=\sum_x(z+x)\,\psi_{1-x}\psi^*_{2-x}=-\sum_x(z+x)\,\psi^*_{2-x}\psi_{1-x}$, the two factors anticommuting since their indices differ. Substituting $v=2-x$: $-\sum_v(z+2-v)\psi^*_v\psi_{v-1}=\sum_v\bigl((-z-2)+v\bigr)\psi^*_v\psi_{v-1}=E_{-z-2}$. The adjoint case is identical. Under $\mathcal R$ a particle at $x$ becomes a hole at $1-x$; the vacuum (particles at $x\le-1$) becomes the configuration with holes at $x\ge2$, i.e.\ particles at $x\le1$, the charge-$2$ vacuum; and the particle set $\{\lambda_i-i\}$ becomes $\{1-h:h\notin X(\lambda)\}$, which is $\{\lambda'_j-j+2\}$ because the sets $\{\lambda_i-i\}$ and $\{-1-(\lambda'_j-j)\}$ partition $\Z$.
+\end{proof}
+
+Thus on the line $z'=-z-2$ the two operators building the measure are exchanged by $\mathcal R$, and the reflection $c\mapsto2-c$ of contents in \eqref{eq:weight} is the shadow of this. Because $M_{z,z'}$ is symmetric in $(z,z')$, the charge-$2$ measure generated by $E_z,E_{z'}$ from $\ket\varnothing^{(2)}$ is the push-forward of the charge-$0$ measure under $\lambda\mapsto\lambda'$; its normalization is again $Z_N$ because $(z+2)(z'+2)=zz'$ on the line.
+
+\begin{proposition}[proved]\label{prop:fockform}
+Let $\hat D=\sum_{x\ge0}\psi^*_x\psi_x$ count particles at nonnegative positions and $W=\psi^*_1\psi^*_0$. Conjecture~\ref{conj:zline} for all $k$ is equivalent to
+\begin{equation}\label{eq:fockid}
+\bigl\langle E_{z'}^{N+1}\ket\varnothing,\ z^{\hat D}E_z^{N+1}\ket\varnothing\bigr\rangle
+=z\,(N+1)(N+zz')\,\bigl\langle E_{z'}^{N}W\ket\varnothing,\ z^{\hat D}E_z^{N}W\ket\varnothing\bigr\rangle,\qquad z'=-z-2,
+\end{equation}
+for all $N$ and $z$.
+\end{proposition}
+
+\begin{proof}
+Under $\mathcal R$, particles at $\ge0$ correspond to holes at $\le1$, and for a charge-$2$ configuration the number of holes at $\le1$ equals the number of particles at $\ge2$ plus $2$ minus the number of particles in $\{0,1\}$, so $\{\mu_{k-1}\ge k+1\}=\{N_2\ge k-1\}$ in charge $0$ becomes $\{\hat D\ge k+1\}$ in charge $2$. Proposition~\ref{prop:cleanform}(a), transported to the line (its proof only uses Proposition~\ref{prop:equiv}(e), which holds verbatim for $M_t$), reads $\E^{(0)}_{N+1}[z^{\hat D}]=z\,\E^{(2)}_N[z^{\hat D}]$ for the two sectors' measures, and \eqref{eq:EzN} with the normalizations $N!^2Z_N$ and $(N+1)!^2Z_{N+1}=(N+1)!^2Z_N(N+zz')/(N+1)$ gives \eqref{eq:fockid}.
+\end{proof}
+
+\begin{computation}[verified by finite computation]
+There is no operator $\Omega=\sum_{j\ge1}c_j(z)\,\psi^*_{-j}\psi^*_j$ (these are all quadratic operators of charge $+2$ and energy $-1$, since $\psi^*_a\psi^*_b$ with $a<b$ changes the energy by $a+b-1$) with $\Omega E_z^{N+1}\ket\varnothing=\kappa E_z^NW\ket\varnothing$: for $N\le5$, $j\le N+3$, and $c_j$ arbitrary functions of $z$, the only solution is $\kappa=0$. The identity \eqref{eq:fockid} holds in the pairing only. The obstruction is visible in the commutator $[E_z,W]=(z+2)\psi^*_2\psi_1W$ and in the fact that $W$ annihilates the move $-1\to0$, the one move that $z^{\hat D}$ detects.
+\end{computation}
+
+\section{The grid model and the bijective problem}\label{sec:grid}
+
+\begin{definition}
+For a subset $S$ of the grid $[a]\times[b]$ let $\lambda(S)$ be the Robinson--Schensted shape (row insertion, bumping the leftmost entry strictly larger than the inserted one) of the word obtained by listing, for $j=1,\dots,b$, the rows $i$ with $(i,j)\in S$ in decreasing order. This is the shape assigned to the $0$--$1$ matrix of $S$ by the dual Robinson--Schensted--Knuth correspondence, and $\#\{S:|S|=N,\ \lambda(S)=\lambda\}=s_\lambda(1^a)s_{\lambda'}(1^b)$ (checked for the grids $2\times4$ and $3\times5$ against the hook-content formula).
+\end{definition}
+
+For $b=a+2$ this is $M^{(N)}_{t}$ with $t=(a+1)^2$, and Conjecture~\ref{conj:zline} becomes a finite statement about uniform random subsets:
+\begin{equation}\label{eq:gridid}
+(N+1)\,\#\{S:|S|=N+1,\ \Durfee(\lambda(S))\ge k\}=(ab-N)\,\#\{S':|S'|=N,\ \lambda_{k-1}(S')\ge k+1\}.
+\end{equation}
+By Proposition~\ref{prop:topcoef}, \eqref{eq:gridid} for all $a$ is equivalent to Conjecture~\ref{conj:zline}, and for fixed $N$ finitely many $a$ suffice.
+
+\begin{computation}[verified by finite computation]
+\eqref{eq:gridid} holds for $(a,N,k)=(2,3,2)$ (both sides $80$) and $(3,4,2)$ (both sides $8250$).
+\end{computation}
+
+Since $(S',y\notin S')\leftrightarrow(S'\cup\{y\},y)$, \eqref{eq:gridid} is equivalent to an equality of counts of pairs $(S,x)$ with $|S|=N+1$, $x\in S$:
+\begin{equation}\label{eq:pairs}
+\#\{(S,x):\ \Durfee(\lambda(S))\le k-1\}=\#\{(S,x):\ \lambda_{k-1}(S\setminus x)\le k\},
+\end{equation}
+i.e.\ for $S$ uniform of size $N+1$ and $x$ uniform in $S$, the Durfee square of $S$ is smaller than $k$ exactly as often as row $k-1$ of $S\setminus x$ has length at most $k$. A bijection realizing \eqref{eq:pairs} would prove everything.
+
+\begin{computation}[verified by finite computation]\label{comp:gridobst}
+\begin{enumerate}[label=(\roman*)]
+\item The shape is not monotone under deletion of a cell: on the $3\times5$ grid with $|S|=5$ there are $42$ pairs $(S,x)$ with $\lambda(S)=(3,1,1)$ and $\lambda(S\setminus x)=(2,2)\not\subset(3,1,1)$. Greene's theorem makes only the partial sums $\lambda_1+\cdots+\lambda_j$ monotone. Hence ``add a uniformly random cell'' is not a growth process on Young's lattice.
+\item The pair counts $e(\mu,\lambda)=\#\{(S,x):\lambda(S)=\lambda,\lambda(S\setminus x)=\mu\}$ are not given by the Plancherel coupling $(N+1)s_\lambda(1^a)s_{\lambda'}(1^b)f_\mu/f_\lambda$ (they are on the $2\times4$ grid, where the marginal constraints determine $e$, and are not on $3\times5$). So the shape process of the random-cell model is not the Markov chain \eqref{eq:zgrowth} with $(z,z')=(a,-b)$, although its marginals are the $z$-measures.
+\item For permutations, removing the entry of a fixed value $v\notin\{1,N+1\}$ from a uniform $\pi\in S_{N+1}$ does not produce the edge counts $f_\lambda f_\mu$ ($S_5$, $S_6$), although removing the maximum or the minimum does.
+\item With $u(S')=\#\{y\notin S':\Durfee(\lambda(S'\cup y))\ge k\}$, the identity says $\sum_{S'}u(S')=(ab-N)\#\{S':\lambda_{k-1}\ge k+1\}$, but $u$ is not a function of $\lambda(S')$: on $3\times5$, $N=4$, $k=2$, both shapes $(3,1)$ and $(2,1,1)$ have $u$ ranging over $2,\dots,8$.
+\end{enumerate}
+\end{computation}
+
+For $k=2$ and the Plancherel measure the bijective content can be isolated at the level of tableaux:
+\begin{equation}\label{eq:tabl}
+\sum_{a\ge2,\ a+b=N}\binom Nb^2=f_{(2,2,1^{N-3})}^2+\sum_{\substack{\lambda\vdash N+1\\ (1,3)\text{ a corner of }\lambda}}f_\lambda\,f_{\lambda-(1,3)} ,
+\end{equation}
+pairs of hook tableaux with arm at least $2$ on the left; on the right, pairs of tableaux of shape $(2,2,1^c)$ together with pairs $(P,Q)$ in which $Q$ has $N+1$ at $(1,3)$; for $N=3$ this is $9+1=4+3\cdot2$. (Equation \eqref{eq:tabl} is Proposition~\ref{prop:equiv}(c) rewritten: $\Prob_{N+1}(A\setminus B)-\Prob_{N+1}(B\setminus A)=\Prob(\text{box }N+1\text{ is }(1,3))$, with $A\setminus B$ the hooks of arm $\ge2$ and $B\setminus A=\{(2,2,1^c)\}$.) The general-$k$ version replaces ``arm $\ge2$'' by ``row $k-1$ extends at least two boxes beyond a Durfee square of side $k-1$'', the shape $(2,2,1^c)$ by ``$\lambda_{k-1}=\lambda_k=k$'', and $(1,3)$ by $(k-1,k+1)$. No bijection is known.
+
+\section{Asymptotics}\label{sec:asym}
+
+All statements in this section are numerical or heuristic.
+
+\begin{proposition}[heuristic, numerical]
+\begin{enumerate}[label=(\roman*)]
+\item Diagonal: $F(k,k)=\frac{\pi^2}4k(k-1)+c_k$ with $c_k=1,\,1.156,\,1.224,\,1.267,\,1.299,\,1.325,\,1.346,\,1.364,\,1.379,\,1.393$ for $k=1,\dots,10$. The increments $c_k-c_{k-1}$ decay like $0.14/k$, consistent with a term of order $\log k$, which is what bulk fluctuations of order $\sqrt{\log\theta}$ would produce. The leading term follows from the Logan--Shepp--Vershik--Kerov limit shape $\Omega$: the box $(k,k)$ has rotated coordinate $i+j=2k$ and $\Omega(0)=4/\pi$, so it is covered when $\sqrt\theta\cdot4/\pi=2k$.
+\item First row: $F(1,n)=\frac{n^2}4+2^{-4/3}\,|\E\,\mathrm{TW}_2|\,n^{4/3}+O(n)$, where $\E\,\mathrm{TW}_2=-1.7711\ldots$ is the mean of the Tracy--Widom GUE distribution; the coefficient is $0.7029$. This follows from Baik--Deift--Johansson, $\lambda_1(\theta)\approx2\sqrt\theta+\theta^{1/6}\chi$, by writing $\E\,T(1,n)=\E\,\theta(\chi)$ with $\theta(\chi)$ the solution of $n-1=2\sqrt\theta+\theta^{1/6}\chi$. At $n=14$ the empirical coefficient $(F-n^2/4)/n^{4/3}$ is $0.620$ and still increasing.
+\item General direction: for $m,n\to\infty$ with $m/n$ fixed, $F(m,n)\sim\theta^*$, where $\theta^*$ solves $m+n=\sqrt{\theta^*}\,\Omega\bigl((m-n)/\sqrt{\theta^*}\bigr)$, $\Omega(v)=\frac2\pi\bigl(v\arcsin\frac v2+\sqrt{4-v^2}\bigr)$ for $|v|\le2$.
+\end{enumerate}
+\end{proposition}
+
+\section{Open problems}\label{sec:open}
+
+\begin{problem}
+Give a human-readable proof of Conjecture~\ref{conj:zline}. A machine proof exists (Remark~\ref{rem:zlinestatus}), but its algebraic core is three polynomial identities of some $10^5$ characters each, checked by reflection; no proof that can be read has been extracted from it. Lemma~\ref{lem:durfeedet} holds on the line with $H^2$ replaced by $H_zH_{z'}^{\mathsf T}$, where $(H_z)_{ab}=q^{(a+b+1)/2}s_{(a\mid b)}(\rho_z)=q^{(a+b+1)/2}z\,(z+1)_a(-1)^b(1-z)_b/((a+b+1)\,a!\,b!)$; the generating functions of the columns of $H_z$ are $(1-\sqrt q\,x)^{-z-1}$ and $(1+\sqrt q\,x)^{z-1}$ in place of $e^{rx}$ (Remark~\ref{rem:giambelliz}). With $r=\sqrt q$, $(u_z)_a=r^a(z+1)_a/a!$ and $(\tilde u_z)_b=r^b(-1)^b(1-z)_b/b!$, the analogues of \eqref{eq:H1}--\eqref{eq:H4} are, by inspection of the entries (proved),
+\begin{gather*}
+\frac{dH_z}{dr}=z\,u_z\otimes\tilde u_z,\qquad
+H_zA+(A+1)H_z=zr\,u_z\otimes\tilde u_z,\qquad r\,\frac{du_z}{dr}=Au_z,\qquad r\,\frac{d\tilde u_z}{dr}=A\tilde u_z,\\
+X^{\mathsf T}H_z(z-1-A)=(z+1+A)H_zX,\qquad
+(z+A)XH_z-H_zX^{\mathsf T}(z-A)=z\,[A,u_z\otimes\tilde u_z];
+\end{gather*}
+the Plancherel identities are the leading terms as $z\to\infty$ after dividing by the appropriate power of $z$. The $r$-derivative of $C=H_zH_{z'}^{\mathsf T}$ therefore has rank two, $\frac{dC}{dr}=z\,u_z\otimes(H_{z'}\tilde u_z)+z'\,(H_z\tilde u_{z'})\otimes u_{z'}$, against rank one for $H^2$. The analogues of \eqref{eq:H5}, \eqref{eq:H6}, of the recurrences of Lemma~\ref{lem:rec} and of the first integrals \eqref{eq:I1}--\eqref{eq:I2} have not been found.
+\end{problem}
+
+\begin{problem}
+Identify \eqref{eq:durfeeode} with a Painlev\'e equation in standard form. The function $\det(1+zH^2)$ equals the Fredholm determinant on $L^2[0,r]$ of $1+zT^2$, where $T$ has kernel $I_0(2\sqrt{xy})$ (Remark~\ref{rem:Tpicture}), and $T^2$ is a modified Bessel kernel of order $0$; by the results of Tracy and Widom on the Bessel kernel, \eqref{eq:durfeeode} should be a $\sigma$-form of Painlev\'e~III or~V.
+\end{problem}
+
+\begin{problem}
+Find a bijective proof of Theorem~\ref{thm:main}: a bijection for \eqref{eq:pairs} on the grids $[a]\times[a+2]$, or for \eqref{eq:tabl} and its general-$k$ version.
+\end{problem}
+
+\begin{problem}
+Explain the $z$-measure identity on $z+z'=-2$ from the representation theory of $S(\infty)$: the line contains the principal series with $\operatorname{Re}z=-1$, and the involution $\mathcal R$ of Proposition~\ref{prop:involution} should have an interpretation there.
+\end{problem}
+
+\begin{problem}
+Determine whether $F(1,4)$ admits a closed form, and whether the sums $c_N(t)$, $h_{N+1}(t)$ have product formulas for special $t$.
+\end{problem}
+
+\appendix
+
+\section{Special-function and symmetric-function facts used}\label{app:hyper}
+
+References are to the Digital Library of Mathematical Functions (DLMF), Watson's treatise, and Stanley's Enumerative Combinatorics vol.~2 (EC2).
+\begin{enumerate}[label=(H\arabic*),leftmargin=3em]
+\item \label{H:series} ${}_2F_1(a,b;c;x)=\sum_{n\ge0}\frac{(a)_n(b)_n}{(c)_nn!}x^n$ satisfies $x(1-x)F''+[c-(a+b+1)x]F'-abF=0$ (DLMF 15.10.1). When $c$ is a positive integer the second solution at $x=0$ is not analytic there (it contains $\log x$ for $c=1$ and $x^{1-c}$ for $c\ge2$), so an analytic solution is determined by $F(0)$ and $F'(0)=ab/c$.
+\item \label{H:euler} Euler's transformation: ${}_2F_1(a,b;c;x)=(1-x)^{c-a-b}{}_2F_1(c-a,c-b;c;x)$ (DLMF 15.8.1).
+\item \label{H:deriv} $\frac{d}{dx}{}_2F_1(a,b;c;x)=\frac{ab}c{}_2F_1(a+1,b+1;c+1;x)$ (DLMF 15.5.1).
+\item \label{H:contig} Gauss's contiguous relation $(c-a)F(a-1)+(2a-c+(b-a)x)F+a(x-1)F(a+1)=0$ (DLMF 15.5.11) combined with $a(F(a+1)-F)=xF'$ (DLMF 15.5.20) gives $(c-a)F(a-1)=(c-a-bx)F+x(1-x)F'$, the form \eqref{eq:contig} used in the text; by the symmetry $F(a,b;c)=F(b,a;c)$ the same holds with the roles of $a$ and $b$ exchanged.
+\item \label{H:kummer} Kummer's transformation ${}_1F_1(a;b;x)=e^x{}_1F_1(b-a;b;-x)$ (DLMF 13.2.39) and $L^{(\alpha)}_n(x)=\binom{n+\alpha}n{}_1F_1(-n;\alpha+1;x)$ (DLMF 18.11.2).
+\item \label{H:bessel} For integer order: $J_{-n}=(-1)^nJ_n$; $J_{n-1}+J_{n+1}=\frac{2n}uJ_n$; $J_n'=\frac12(J_{n-1}-J_{n+1})$; $J_0'=-J_1$; $\sum_{n\in\Z}J_n(u)J_{n+m}(u)=\delta_{m0}$ (Neumann; Watson \S2.5, obtained from the generating function $e^{(u/2)(\tau-1/\tau)}=\sum_nJ_n(u)\tau^n$ as in the proof of Lemma~\ref{lem:hankel}); $J_n(0)=\delta_{n0}$.
+\item \label{H:hook} Hook-content formula: $s_\lambda(1^n)=\prod_{\square\in\lambda}\frac{n+c(\square)}{h(\square)}$ (EC2, Cor.~7.21.4); the content formula $s_\lambda(\rho_z)=\prod_\square(z+c(\square))/H_\lambda$ is the same identity read as a polynomial identity in $n$; dual Cauchy identity $\sum_\lambda s_\lambda(x)s_{\lambda'}(y)=\prod_{i,j}(1+x_iy_j)$ (EC2, Thm.~7.14.3); dual Jacobi--Trudi $s_\lambda=\det(e_{\lambda'_i-i+j})$ (EC2, Cor.~7.16.2); $\sum_me_mq^m=\exp\bigl(\sum_k(-1)^{k-1}p_kq^k/k\bigr)$ (EC2, eq.~7.22); $s_\lambda(-\rho)=(-1)^{|\lambda|}s_{\lambda'}(\rho)$ for the negated specialization $p_k\mapsto-p_k$ (from $\omega s_\lambda=s_{\lambda'}$ and $\omega p_k=(-1)^{k-1}p_k$).
+\item \label{H:jacobi} For a square matrix $M(r)$ over a field containing $\mathbb Q(z)(r)$ with entries differentiable in $r$, Jacobi's formula $(\det M)'=\tr(\operatorname{adj}(M)\,M')$, hence $(\det M)'=\det M\cdot\tr(M^{-1}M')$ when $M$ is invertible; and the matrix determinant lemma $\det(M+FG^{\mathsf T})=\det M\cdot\det(I_s+G^{\mathsf T}M^{-1}F)$ for $M$ invertible $n\times n$ and $F,G$ of size $n\times s$ (both from $\det\begin{pmatrix}M&F\\-G^{\mathsf T}&I_s\end{pmatrix}$ computed by the two block eliminations). In Lemma~\ref{lem:fred} these are applied to $1+M^{[n]}$ over the field of fractions of $K[[r]]$, where $\det(1+M^{[n]})$ is a unit of $K[[r]]$ and the entries of the inverse lie in $K[[r]]$.
+\end{enumerate}
+
+\section{Computational provenance}\label{app:prov}
+
+Every computation below was done in Python (sympy for exact and symbolic work, mpmath for high precision, numpy/scipy for floating point). ``Exact'' means integer or rational arithmetic, or polynomial arithmetic in the stated symbols.
+
+\begin{enumerate}[label=(P\arabic*),leftmargin=3em]
+\item\label{prov:series} Series \eqref{eq:series}: for each $(m,n)$ with $m,n\le5$, the sum over all $\lambda\vdash N$, $N\le44$, of $f_\lambda^2/N!$ with $f_\lambda$ from the hook formula, in $30$-digit arithmetic. Values agree with \ref{prov:fredholm} to $10^{-9}$.
+\item\label{prov:fredholm} Integral \eqref{eq:Fint}: $K$ from \eqref{eq:Kdef} truncated at $2\sqrt\theta+80$ orders; $\Prob_\theta(N_s\le j)$ from the eigenvalues of $K_{[s,\infty)}$ (spectrum in $[0,1]$); adaptive quadrature in $\theta$ with relative tolerance $10^{-11}$. Table~\ref{tab:F}; the nine printed decimals are stable under doubling the truncation.
+\item Closed forms: $F(1,3)$ and $F(2,2)$ evaluated with mpmath Bessel functions to $30$ digits; $F(2,2)-F(1,3)=1$ to all digits.
+\item $F(1,4)$: the direct sum $\sum_{N<80}u_N/N!$ with exact $u_N$ from Gessel's formula, and the single sum \eqref{eq:F14} with mpmath Laguerre polynomials; agreement to $40$ digits. PSLQ as stated in the text.
+\item Fat-hook identity, Computation~\ref{comp:main}: for each $k$ and $N$, the shapes inside $H(k-1,k-1)$ of size $N+1$ and inside $H(k-2,k)$ of size $N$ were generated directly (partitions with a cap on the parts after row $k-1$, resp.\ $k-2$), and $\sum f_\lambda^2$ compared in exact integer arithmetic. Running time about $16$ minutes for $k=5$, $N\le70$.
+\item Relation searches, Computation~\ref{comp:rigid}(i)--(ii): exact rational null spaces (sympy) over $N<31$, resp.\ $N<30$.
+\item Alternative weights, Computation~\ref{comp:rigid}(iii): exact ratios $A/B$ for $N\le14$; the ratio is $N+1$ for $f_\lambda^2$ and irregular otherwise.
+\item Generating-function form \eqref{eq:starstar}: exact enumeration over $\lambda\vdash N$, $N<14$, with $\mu_\lambda(\{0\})$ from \eqref{eq:plgrowth}, as polynomials in $z$; also for $s\in\{-2,-1,1,2\}$ (Computation~\ref{comp:rigid}(v)).
+\item Frobenius form \eqref{eq:frob}: exact check for $k=2,3,4$ and $N\le25$; Frobenius's formula \eqref{eq:frobF} against the hook formula for $|\lambda|\le12$; the three sums $S_1,S_2,S_3$ of the second proof of Theorem~\ref{thm:k2} against their closed forms, and $S_1-S_2+S_3=0$, for $2\le m\le12$ in exact arithmetic.
+\item $z$-measures, Computation~\ref{comp:zline}: item (iii) by partition enumeration in pure Python with exact rationals, the identity being read off coefficientwise in $q$ and in the counting variable, so that each $k$ is checked separately; items (i) and (ii) as exact rational functions of $z$ (on the line) or of $(z,z')$; the divisibility by $z+z'+2$ tested by polynomial remainder.
+\item\label{prov:k2z} Theorem~\ref{thm:k2z}: (a) the explicit weights of hooks and two-column shapes checked against the general formula for $N\le8$; (b) the generating function $c_0^2-c_1c_{-1}$ of Lemma~\ref{lem:gessel2}, with the $c$'s of Step~1 of Lemma~\ref{lem:twocol}, checked against the two-column sums for $N<8$, symbolically in $s$; (c) the representations $v$, $\tilde v$, $U$, $\tilde U$, $A_{-1}$ verified by substituting into the respective hypergeometric equations modulo \eqref{eq:ode} (residue $0$ as a rational function) and checking value and first derivative at $x=0$; the hand formulas $v'=(1-x)y'-sy$, $\tilde v'=(1-x)y'+sy$ and the coefficients of $A_{-1}$ verified symbolically; (d) the product formula \eqref{eq:product} verified symbolically modulo \eqref{eq:ode} and coefficientwise for $x^0,\dots,x^8$; (e) $(\vartheta+1)T=y^2/(1-x)^2$ verified symbolically modulo \eqref{eq:ode}, and Corollary~\ref{cor:Nc} coefficientwise for $N<8$; (f) the full reduction of \eqref{eq:diffid} modulo \eqref{eq:ode} returned $0$. Second proof: (g) \eqref{eq:hookconv2} and \eqref{eq:twocolconv} checked against the sums of $w_t$ over hooks of $N+1$ and over two-column shapes of $N$, computed from contents and hook lengths, for $N\le8$, symbolically in $t$; (h) \eqref{eq:thetaid} checked coefficientwise for $x^0,\dots,x^{12}$, symbolically in $t$, with $y$ truncated at $x^{13}$.
+\item Dual-Cauchy tests, Computation~\ref{comp:dualrigid}: Schur functions by Jacobi--Trudi with $h_m$ from generating functions (the bialternant formula fails for repeated variables), exact in the symbols $a,b$.
+\item Theorem~\ref{thm:content0}: exact enumeration of $(N+1)!\Prob(c_{N+1}=0)$ for $N+1\le11$ versus the Taylor coefficients of $e^\theta(J_0^2+J_1^2)(2\sqrt\theta)$ in $30$-digit arithmetic; content relations for $N\le25$ exact.
+\item Determinantal identity \eqref{eq:spade} and Lemma~\ref{lem:selfdual}: $\ell^2[0,\infty)$ truncated at $160$ sites, $\ell^2(\Z)$ at $[-40,160)$; resolvents by direct inversion; finite differences with step $10^{-5}$ for \eqref{eq:lax}.
+\item\label{prov:proof} Section~\ref{sec:proof}, Computation~\ref{comp:proofcheck}: $H$ truncated to $50\times50$ (entries beyond are below $10^{-60}$ for $r\le1.5$), mpmath at $40$ digits, $\mathcal G$ by direct inversion; each operator identity of Lemmas~\ref{lem:Hids}, \ref{lem:Gids}, \ref{lem:rec} checked as a matrix identity (maximal entry of the difference $<10^{-30}$); the differential identities of Lemma~\ref{lem:odes} and of Propositions~\ref{prop:level0}--\ref{prop:level1} by central differences with step $10^{-10}$ (agreement $10^{-18}$); the closed forms \eqref{eq:I1}--\eqref{eq:I4}, \eqref{eq:p1q1}, \eqref{eq:G01G11} and \eqref{eq:Cprime} directly. Symbolically (sympy): the reduction of \eqref{eq:Cprime} to $0$ after substituting \eqref{eq:I3}, \eqref{eq:I4}, \eqref{eq:p1q1} and the relation $\sigma^2=\beta W$; the identities $r^2(\Xi-P^2\Theta)=-(P+\sigma)(\sigma^2-\beta W)$, $\Theta=(1-z)rp_1q_1$, $\tau'=-\Lambda/r$ and $\Phi'=-2zp_1q_1$ modulo $\sigma^2=\beta W$, with $P,Q,\sigma$ differentiated by \eqref{eq:scalode} and $\sigma'=2P(r+zQ-2zrP^2)$. Lemma~\ref{lem:durfeedet}: $e^{-\theta}\det(1+zH^2)$ and $e^{-\theta}\det(1+ZH^2)$ against the sums over $\lambda\vdash N$, $N<45$, at three values of $(\theta,z)$, to $10^{-15}$ (the truncation of the $\lambda$-sum). Remark~\ref{rem:Tpicture}: Gauss--Legendre Nystr\"om discretization of $T$ with $80$ nodes. Corollary~\ref{cor:durfeeode}: $g=\log\det(1+zH^2)$ differentiated numerically (mpmath, $40$ digits) at $(r,z)=(0.9,0.6),(1.2,-0.3)$; residual of \eqref{eq:durfeeode} below $10^{-40}$ relative to its terms.
+\item Fock space: states as finite Maya diagrams (sea truncated at depth $40$), operators with the wedge signs of Section~\ref{sec:fock}; the formula for $E_z^NW\ket\varnothing$ verified against direct operator application for $N\le4$; the intertwiner equations solved exactly, coefficientwise in $z$.
+\item Grid model, Section~\ref{sec:grid}: exhaustive enumeration of subsets of the $2\times4$ and $3\times5$ grids; row insertion implemented directly; shape distribution checked against $s_\lambda(1^a)s_{\lambda'}(1^b)$ by the hook-content formula.
+\item Asymptotics: least-squares fits of $F(k,k)-\frac{\pi^2}4k^2$ to $bk+c+d/k$ on $k=4,\dots,10$ give $b=-2.458$ (compare $-\pi^2/4=-2.467$); the Tracy--Widom mean from Bornemann's tables.
+\end{enumerate}
+
+\section{Formalization}\label{app:formal}
+
+Parts of this paper have been formalized in Lean~4 (toolchain v4.28.0) with Mathlib (revision v4.28.0), in a project \texttt{RequestProject} with namespace \texttt{AvgRS}. The formalization was produced with Aristotle (Harmonic) from the text of this paper, in four rounds, each audited by hand against the paper: every formal statement was compared with the corresponding statement here, and the formal proofs were not otherwise inspected. This appendix records what the formal statements say, since several of them take definitions as their starting point that the paper proves.
+
+\emph{Definitions.} A partition is a \texttt{Nat.Partition}; $f_\lambda$ (\texttt{numSYT}) is defined by the branching rule $f_\varnothing=1$, $f_\lambda=\sum_{\mu\lessdot\lambda}f_\mu$, not as a count of tableaux; $\lambda_i\ge j$ is \texttt{HasBox p i j}; $F(m,n)$ (\texttt{avgEntry}) is defined by the series of Proposition~\ref{prop:series}, so the identification with the average tableau entry and with $\E\,T(m,n)$ (Proposition~\ref{prop:FisET}, Robinson--Schensted) is not formalized; $w_t$ is \texttt{contentWt}, equal to $N!^2w_t(\lambda)$ in the notation of Section~\ref{sec:zline}. Formal power series in $r$ are \texttt{PowerSeries }$\mathbb Q$, and the infinite matrices of Section~\ref{sec:proof} are replaced by their $m\times m$ truncations together with $r$-adic limits as $m\to\infty$ (files \texttt{Formal/*.lean}).
+
+\emph{Formal theorems.} The following are proved in the project:
+\begin{itemize}[leftmargin=1.5em]
+\item \texttt{shift\_identity}: for all $k\ge2$ and $N\ge0$, $\sum_{\lambda\vdash N+1,\ \lambda_k\le k-1}f_\lambda^2=(N+1)\sum_{\mu\vdash N,\ \mu_{k-1}\le k}f_\mu^2$ (Theorem~\ref{thm:main} in the form of Proposition~\ref{prop:equiv}(a)). The proof follows Section~\ref{sec:proof}, including a proof of Giambelli's formula for $f_\lambda/|\lambda|!$ from the branching rule (\texttt{giambelli\_formula}, Lemma~\ref{lem:durfeedet}), which the paper cites from Macdonald.
+\item \texttt{avgEntry\_diag}: $F(k,k)=F(k-1,k+1)+1$ for all $k\ge2$ (Corollary~\ref{cor:Fshift}); \texttt{shift\_identity\_two}: Theorem~\ref{thm:k2}; the closed forms $F(1,1)=1$, $F(1,2)=e$, $F(1,3)=e^2(I_0(2)-I_1(2))$ (Proposition~\ref{prop:closed}).
+\item \texttt{syt\_up}: the up rule $\sum_{\lambda\gtrdot\nu}f_\lambda=(|\nu|+1)f_\nu$, from $DU-UD=I$ on Young's lattice; \texttt{content0\_all}: \eqref{eq:content0N} multiplied by $(N+1)!$, for all $N$, derived from \texttt{shift\_identity} and the up rule as in the proof of Theorem~\ref{thm:content0}.
+\item \texttt{giambelli\_content}: Giambelli's formula for $s_\lambda(\rho_z)$ in the form of Remark~\ref{rem:giambelliz}; \texttt{zlineGF} and \texttt{zline\_identity\_of\_formal}: the two determinant formulas of that remark and the equivalence of Conjecture~\ref{conj:zline} with the differential identity stated there; \texttt{deriv\_hzE}, \texttt{hzE\_H2}, \texttt{hzE\_H3}, \texttt{hzE\_H4}: the four identities for $H_z$ in Section~\ref{sec:open}, entrywise.
+\item \texttt{zline\_identity\_two}: Theorem~\ref{thm:k2z}, by the second proof, of which it is the source.
+\item \texttt{zline\_identity}: Conjecture~\ref{conj:zline}, for all $k\ge2$, all $N$ and all $t$ (Remark~\ref{rem:zlinestatus}). The chain is: the scalars of the resolvent of $H_zH_{z'}^{\mathsf T}$ as $X$-adic limits of the truncations (\texttt{zdata}); their differential equations, recurrences and level-$0$ relations (\texttt{ZAlgData}, a record of $46$ fields, each discharged); five first integrals derived from those (\texttt{zrels}), of which the first comes from differentiating the level-$0$ relation; the closed forms and the identity of Remark~\ref{rem:giambelliz} (\texttt{zline\_alg}); and the passage to all $t$ by comparing two polynomials at the infinitely many points $t=(n+2)^2$. The three largest identities are checked by a reflection tactic (\texttt{RingRefl}, \texttt{RingKernel}) whose soundness lemma is proved in Lean, so no trusted code is added.
+\end{itemize}
+Not formalized: Proposition~\ref{prop:FisET}; Section~\ref{sec:zline} apart from Theorem~\ref{thm:k2z}; Sections~\ref{sec:bessel}--\ref{sec:asym}; $F(1,4)$.
+
+\emph{Axioms.} The reports of the formalization runs state that every theorem listed above depends only on the axioms \texttt{propext}, \texttt{Classical.choice} and \texttt{Quot.sound}, that \texttt{lake build} completes on both library targets, and that no \texttt{sorry} remains outside a commented-out block. The library is built with \texttt{--tstack=4000000} and with the linters disabled in the three files holding the largest identities. A separate library \texttt{Computations}, imported by no file of \texttt{RequestProject}, checks by \texttt{native\_decide}, which trusts the compiler, the shift identity for $3\le k\le5$, $N\le25$ (part of Computation~\ref{comp:main}) and the eleven values of Computation~\ref{comp:content0}; nothing above depends on it. [An independent rebuild of the project from source, with \texttt{\#print axioms} run on each theorem listed, has not yet been carried out; until it has, the axiom statement rests on the run reports.]
+
+\section*{Acknowledgments}
+The function $F$ and the equality $F(1,3)=F(2,2)-1$ were posted on MathOverflow in 2011 [Feldman 2011]. Marc van Leeuwen's comment there supplied the two observations recorded in Remark~\ref{rem:stopping}, and Per Alexandersson's answer the dual question recorded after Theorem~\ref{thm:content0}. The formalization described in Appendix~\ref{app:formal} was carried out with Aristotle (Harmonic); the second proof of Theorem~\ref{thm:k2z} was extracted from it.
+
+\section*{References}
+\begin{itemize}[leftmargin=1.5em]
+\item J.~Baik, P.~Deift, K.~Johansson, On the distribution of the length of the longest increasing subsequence of random permutations, J.~Amer.\ Math.\ Soc.\ 12 (1999).
+\item A.~Borodin, Discrete gap probabilities and discrete Painlev\'e equations, Duke Math.\ J.\ 117 (2003).
+\item A.~Borodin, D.~Boyarchenko, Distribution of the first particle in discrete orthogonal polynomial ensembles, Comm.\ Math.\ Phys.\ 234 (2003); arXiv:math-ph/0204001.
+\item A.~Borodin, A.~Okounkov, G.~Olshanski, Asymptotics of Plancherel measures for symmetric groups, J.~Amer.\ Math.\ Soc.\ 13 (2000).
+\item A.~Borodin, G.~Olshanski, Distributions on partitions, point processes, and the hypergeometric kernel, Comm.\ Math.\ Phys.\ 211 (2000).
+\item K.~L.~Chung, W.~Feller, On fluctuations in coin-tossing, Proc.\ Nat.\ Acad.\ Sci.\ 35 (1949).
+\item NIST Digital Library of Mathematical Functions, \texttt{https://dlmf.nist.gov}, Chapters 13, 15, 18.
+\item D.~Feldman, Permutations, stopping times, Bessel functions, hook formula and Robinson--Schensted, MathOverflow question 82353 (December 1, 2011), \url{https://mathoverflow.net/q/82353}, with comments by J.~Jiang and M.~van Leeuwen (2011) and an answer by P.~Alexandersson (2014); accessed September 24, 2026.
+\item I.~M.~Gessel, Symmetric functions and P-recursiveness, J.~Combin.\ Theory Ser.\ A 53 (1990).
+\item C.~Greene, An extension of Schensted's theorem, Adv.\ Math.\ 14 (1974).
+\item K.~Johansson, Discrete orthogonal polynomial ensembles and the Plancherel measure, Ann.\ of Math.\ 153 (2001).
+\item I.~G.~Macdonald, Symmetric Functions and Hall Polynomials, 2nd ed., Oxford (1995), Chapter~I.
+\item S.~Kerov, Transition probabilities of continual Young diagrams and the Markov moment problem, Funct.\ Anal.\ Appl.\ 27 (1993).
+\item S.~Kerov, G.~Olshanski, A.~Vershik, Harmonic analysis on the infinite symmetric group, Invent.\ Math.\ 158 (2004).
+\item B.~F.~Logan, L.~A.~Shepp, A variational problem for random Young tableaux, Adv.\ Math.\ 26 (1977); A.~M.~Vershik, S.~V.~Kerov, Asymptotics of the Plancherel measure of the symmetric group, Soviet Math.\ Dokl.\ 18 (1977).
+\item A.~Okounkov, Infinite wedge and random partitions, Selecta Math.\ 7 (2001); SL(2) and $z$-measures, in: Random matrix models and their applications, MSRI Publ.\ 40 (2001).
+\item A.~Regev, Asymptotic values for degrees associated with strips of Young diagrams, Adv.\ Math.\ 41 (1981).
+\item D.~Romik, P.~\'Sniady, Jeu de taquin dynamics on infinite Young tableaux and second class particles, Ann.\ Probab.\ 43 (2015).
+\item R.~P.~Stanley, Enumerative Combinatorics, vol.~2, Cambridge (1999), Chapter~7.
+\item C.~A.~Tracy, H.~Widom, Level-spacing distributions and the Bessel kernel, Comm.\ Math.\ Phys.\ 161 (1994); Fredholm determinants, differential equations and matrix models, Comm.\ Math.\ Phys.\ 163 (1994).
+\item G.~N.~Watson, A Treatise on the Theory of Bessel Functions, 2nd ed., Cambridge (1944), Chapter~II.
+\end{itemize}
+
+\end{document}

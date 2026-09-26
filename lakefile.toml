@@ -1,0 +1,17 @@
+name = "RequestProject"
+defaultTargets = ["RequestProject", "Computations"]
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.28.0"
+
+[[lean_lib]]
+name = "RequestProject"
+globs = ["RequestProject.+"]
+# The large `linear_combination` proofs in `ZLineAlg*.lean` need more stack than the default.
+weakLeanArgs = ["--tstack=4000000"]
+
+[[lean_lib]]
+name = "Computations"
+globs = ["Computations.+"]
